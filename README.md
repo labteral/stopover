@@ -1,5 +1,3 @@
-# stopover
-
 # Initialise the data dir
 ```bash
 mkdir -p ./data/streams
