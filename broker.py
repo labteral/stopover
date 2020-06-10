@@ -113,8 +113,6 @@ class Broker:
 
     @log_errors
     def put_message(self, key: str, value: bytes, stream: str, partition_number: int = None) -> dict:
-        # WITH LOCK REBALANCE, FALTA HILO REBALANCEO AUTOMÁTICO + PING
-
         partition_numbers = self._get_stream_partition_numbers(stream)
 
         if partition_number is None:
