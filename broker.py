@@ -285,4 +285,4 @@ class Broker:
                 self.stream_assignments[stream][receiver][
                     stream_receiver_instances[instance_index]]['partitions'].append(stream_partition_numbers[index])
 
-            logging.info(json.dumps(self.stream_assignments, indent=2))
+            logging.debug(json.dumps(self.stream_assignments))
