@@ -11,8 +11,6 @@ class PartitionItem:
         if item_bytes is not None:
             self.value, self.timestamp = self._load_from_bytes(item_bytes)
         else:
-            if not isinstance(value, bytes):
-                raise TypeError
             if timestamp is None:
                 raise ValueError('the timestamp was not provided')
             self.value = value

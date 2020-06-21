@@ -1,8 +1,8 @@
 ---
 global:
   data_dir: ./data
-  receiver_instance_timeout: 60
-  rebalance_interval: 30
+  receiver_instance_timeout: 10
+  rebalance_interval: 10
 streams:
   default:
     partitions: 1
