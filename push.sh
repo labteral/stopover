@@ -1,4 +1,4 @@
 #!/bin/bash
 source env.sh
-docker push labteral/stopover
-docker push labteral/stopover:$STOPOVER_VERSION
+docker push labteral/stopover-server
+docker push labteral/stopover-server:$STOPOVER_VERSION

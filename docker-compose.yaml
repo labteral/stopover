@@ -9,7 +9,7 @@ x-logging: &default-logging
 services:
   stopover:
     container_name: stopover-server
-    image: labteral/stopover
+    image: labteral/stopover-server
     volumes:
       - ./config.yaml:/opt/stopover/config.yaml:ro
       - ./data/:/opt/stopover/data/:rw
