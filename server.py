@@ -15,11 +15,9 @@ banner = """\033[94m
 ███████    ██    ████████ ██      ████████   ████   ███████ ██   ██\033[93m
                                                 Stopover v0.1-alpha\033[0m
 """
-
 logging.getLogger().setLevel(logging.INFO)
 logging.basicConfig(format='%(asctime)-15s [%(levelname)s] %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
-
-print(banner)
+logging.info(f'\n{banner}')
 
 CONFIG_PATH = './config.yaml'
 
@@ -32,5 +30,5 @@ except FileNotFoundError:
     logging.critical('the streams dir is not active')
     sys.exit(4)
 
-api = falcon.App(cors_enable=True)
+api = falcon.App()
 api.add_route('/', Broker(config))

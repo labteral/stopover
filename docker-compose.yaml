@@ -1,0 +1,19 @@
+version: "3.4"
+
+x-logging: &default-logging
+  options:
+    max-size: "10m"
+    max-file: "5"
+  driver: json-file
+
+services:
+  stopover:
+    container_name: stopover-server
+    image: labteral/stopover
+    volumes:
+      - ./config.yaml:/opt/stopover/config.yaml:ro
+      - ./data/:/opt/stopover/data/:rw
+    ports:
+      - 5704:5704
+    logging: *default-logging
+    restart: always
