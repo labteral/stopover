@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-#import pyximport
-#pyximport.install(pyimport=True)
-
 import falcon
 import logging
 import yaml
@@ -57,9 +54,5 @@ class Server(BaseApplication):
 
 
 if __name__ == "__main__":
-    options = {'bind': f"0.0.0.0:5704",
-               'workers': 1,
-               'threads': 16,
-               'keepalive': 300}
-
+    options = {'bind': f"0.0.0.0:5704", 'workers': 1, 'threads': 16, 'keepalive': 300}
     Server(api, options).run()
