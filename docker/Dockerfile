@@ -20,7 +20,7 @@ RUN \
     && tar xf rocksdb.tar.gz \
     && cd rocksdb-$ROCKSDB_VERSION \
     && DEBUG_LEVEL=0 make shared_lib install-shared \
-    cd .. \
+    && cd .. \
     && rm -r rocksdb-$ROCKSDB_VERSION \
     && rm rocksdb.tar.gz
 
