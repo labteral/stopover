@@ -19,13 +19,13 @@ RUN \
     && curl -L $ROCKSDB_BASE_URL/v$ROCKSDB_VERSION.tar.gz -o rocksdb.tar.gz -s \
     && tar xf rocksdb.tar.gz \
     && cd rocksdb-$ROCKSDB_VERSION \
-    && DEBUG_LEVEL=0 make shared_lib install-shared
-
-RUN \
+    && DEBUG_LEVEL=0 make shared_lib install-shared \
     cd .. \
     && rm -r rocksdb-$ROCKSDB_VERSION \
-    && rm rocksdb.tar.gz \
-    && pip install --upgrade pip \
+    && rm rocksdb.tar.gz
+
+RUN \
+    pip install --upgrade pip \
     && pip install \
     cython==0.29.20 \
     easyrocks \
@@ -41,5 +41,6 @@ RUN \
 
 ADD stopover.tar /opt/stopover
 WORKDIR /opt/stopover
+
 ENTRYPOINT ["gunicorn", "server:api", "--workers", "1", "--bind", "0.0.0.0:5704"]
 CMD ["--threads", "16", "--keep-alive", "300"]
