@@ -43,6 +43,10 @@ def get_timestamp_ms() -> int:
     return int(round(time.time() * 1000))
 
 
+def get_timestamp() -> int:
+    return int(round(time.time()))
+
+
 def string_to_sha3_256(text: str):
     return hashlib.sha3_256(text.encode('utf-8')).hexdigest()
 

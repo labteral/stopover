@@ -8,19 +8,21 @@ import sys
 from broker import Broker
 from gunicorn.app.base import BaseApplication
 
-banner = """\033[94m
+banner = """\033[93m
 ███████ ████████ ████████ ███████ ████████ ██    ██ ███████ ██████
 ██         ██    ██    ██ ██   ██ ██    ██ ██    ██ ██      ██   ██
 ███████    ██    ██    ██ ███████ ██    ██ ██    ██ █████   ██████
      ██    ██    ██    ██ ██      ██    ██  ██  ██  ██      ██   ██
-███████    ██    ████████ ██      ████████   ████   ███████ ██   ██\033[93m
+███████    ██    ████████ ██      ████████   ████   ███████ ██   ██
                                                 Stopover v0.1-alpha\033[0m
 """
 
 CONFIG_PATH = './config.yaml'
 
-logging.getLogger().setLevel(logging.INFO)
-logging.basicConfig(format='%(asctime)-15s [%(levelname)s] %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+logging.getLogger().setLevel(logging.DEBUG)
+#logging.getLogger().setLevel(logging.INFO)
+logging.basicConfig(format='%(asctime)-15s [%(levelname)s] %(message)s',
+                    datefmt='%Y-%m-%d %H:%M:%S')
 logging.info(f'\n{banner}')
 
 with open(CONFIG_PATH, 'r') as input_file:

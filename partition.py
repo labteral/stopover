@@ -82,6 +82,20 @@ class Partition:
         offset_key = self._get_offset_key(receiver)
         self._store.put(offset_key, offset)
 
+    def prune(self, ttl):
+        if not ttl:
+            return
+
+        current_timestamp = utils.get_timestamp()
+        keys_to_delete = []
+        for key, value in self._store.scan(prefix='message:'):
+            item_timestamp = PartitionItem(item_bytes=value).timestamp
+            if current_timestamp - item_timestamp > ttl:
+                keys_to_delete.append(key)
+
+        for key in keys_to_delete:
+            self._store.delete(key)
+
     def _get_index(self):
         index_key = self._get_index_key()
         index = self._store.get(index_key)
