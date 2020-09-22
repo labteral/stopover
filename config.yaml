@@ -3,9 +3,9 @@ global:
   data_dir: ./data
   receiver_timeout: 10
   rebalance_interval: 5
-  prune_interval: 10
+  prune_interval: 3600
   partitions: 1
-  ttl: 10 # 2592000 # 30 days
+  ttl: 2592000 # 30 days
 
 # streams:
 #   stream0:

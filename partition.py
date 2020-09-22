@@ -4,6 +4,7 @@ import utils
 from os import makedirs
 from easyrocks import DB, WriteBatch
 from threading import Lock
+import logging
 
 
 class PartitionItem:
@@ -55,25 +56,37 @@ class Partition:
             return index
 
     def get(self, receiver: str) -> dict:
-        offset = self._get_offset(receiver)
-        index = offset + 1
-        message_key = self._get_message_key(index)
-
+        receiver_index = self._get_offset(receiver) + 1
+        message_key = self._get_message_key(receiver_index)
         stored_value = self._store.get(message_key)
+
+        # Fast-forward the offset if messages were pruned
+        if stored_value is None:
+            with self.lock:
+                current_index = self._get_index()
+                while stored_value is None and receiver_index < current_index:
+                    self._increase_offset(receiver)
+                    receiver_index = self._get_offset(receiver) + 1
+                    message_key = self._get_message_key(receiver_index)
+                    stored_value = self._store.get(message_key)
+
         if stored_value is None:
             return
 
         item = PartitionItem(item_bytes=stored_value).dict
-        item['index'] = index
+        item['index'] = receiver_index
         return item
 
     def commit(self, offset: int, receiver: str):
         if offset < 0:
             raise ValueError('the partition is empty')
-        expected_offset = self._get_offset(receiver) + 1
-        if offset != expected_offset:
-            raise ValueError(f'trying to commit offset {offset} but {expected_offset} was expected')
-        self._increase_offset(receiver)
+
+        with self.lock:
+            expected_offset = self._get_offset(receiver) + 1
+            if offset != expected_offset:
+                raise ValueError(
+                    f'trying to commit offset {offset} but {expected_offset} was expected')
+            self._increase_offset(receiver)
 
     def set_offset(self, receiver: str, offset: int):
         index = self._get_index()
@@ -89,11 +102,14 @@ class Partition:
         current_timestamp = utils.get_timestamp()
         keys_to_delete = []
         for key, value in self._store.scan(prefix='message:'):
-            item_timestamp = PartitionItem(item_bytes=value).timestamp
-            if current_timestamp - item_timestamp > ttl:
+            item_timestamp = int(PartitionItem(item_bytes=value).timestamp / 1000)
+            if current_timestamp - item_timestamp < ttl:
+                break
+            else:
                 keys_to_delete.append(key)
 
         for key in keys_to_delete:
+            logging.debug(f'Deleting {key}')
             self._store.delete(key)
 
     def _get_index(self):

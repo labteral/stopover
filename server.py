@@ -19,8 +19,8 @@ banner = """\033[93m
 
 CONFIG_PATH = './config.yaml'
 
-logging.getLogger().setLevel(logging.DEBUG)
-#logging.getLogger().setLevel(logging.INFO)
+# logging.getLogger().setLevel(logging.DEBUG)
+logging.getLogger().setLevel(logging.INFO)
 logging.basicConfig(format='%(asctime)-15s [%(levelname)s] %(message)s',
                     datefmt='%Y-%m-%d %H:%M:%S')
 logging.info(f'\n{banner}')

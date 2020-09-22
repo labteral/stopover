@@ -27,12 +27,6 @@ def log_errors(method):
 class Broker:
     def __init__(self, config):
         self.config = config
-        self.is_init = False
-
-    def init(self):
-        if self.is_init:
-            return
-        self.is_init = True
 
         self.partitions_by_stream_lock = Lock()
         self.partitions_by_stream = {}
@@ -44,10 +38,9 @@ class Broker:
         self.partitions = {}
 
         Thread(target=self._rebalance_loop, daemon=True).start()
+        Thread(target=self._prune_loop, daemon=True).start()
 
     def on_post(self, request, response):
-        self.init()
-
         data = utils.unpack(utils.decompress(request.stream.read()))
 
         if 'method' not in data:
@@ -238,20 +231,23 @@ class Broker:
                     data_dir=self.config['global']['data_dir'])
             return self.partitions[stream][partition_number]
 
+    def _get_stream_path(self, stream: str) -> str:
+        return f"{self.config['global']['data_dir']}/streams/{stream}/"
+
     def _get_stream_partition_numbers(self, stream: str):
         if stream in self.partitions_by_stream:
             return self.partitions_by_stream[stream]
 
         with self.partitions_by_stream_lock:
-            partitions_numbers = []
-            self.partitions_by_stream[stream] = partitions_numbers
+            partition_numbers = []
+            self.partitions_by_stream[stream] = partition_numbers
 
             stream_exists = False
-            stream_path = f"{self.config['global']['data_dir']}/streams/{stream}/"
+            stream_path = self._get_stream_path(stream)
             if path.isdir(stream_path):
                 for partition_number in sorted(listdir(stream_path)):
                     try:
-                        partitions_numbers.append(int(partition_number))
+                        partition_numbers.append(int(partition_number))
                         stream_exists = True
                     except ValueError:
                         continue
@@ -267,7 +263,7 @@ class Broker:
                     Partition(stream=stream,
                               number=partition_number,
                               data_dir=self.config['global']['data_dir'])
-                    partitions_numbers.append(partition_number)
+                    partition_numbers.append(partition_number)
 
             return self.partitions_by_stream[stream]
 
@@ -339,3 +335,29 @@ class Broker:
             self.partition_locks[stream][partition_number] = Lock()
 
         return self.partition_locks[stream][partition_number]
+
+    def _prune_loop(self):
+        while True:
+            time.sleep(self.config['global']['prune_interval'])
+            streams_path = f"{self.config['global']['data_dir']}/streams/"
+            for stream in listdir(streams_path):
+                stream_path = self._get_stream_path(stream)
+                if path.isdir(stream_path):
+                    partition_numbers = []
+                    for partition_number in sorted(listdir(stream_path)):
+                        try:
+                            partition_numbers.append(int(partition_number))
+                        except ValueError:
+                            continue
+
+                    stream_with_defined_ttl = 'streams' in self.config and stream in self.config[
+                        'streams'] and 'ttl' in self.config['streams'][stream]
+
+                    if stream_with_defined_ttl:
+                        ttl = self.config['streams'][stream]['ttl']
+                    else:
+                        ttl = self.config['global']['ttl']
+
+                    for partition_number in partition_numbers:
+                        logging.debug(f'pruning partition {partition_number} of stream {stream}...')
+                        self._get_partition(stream, partition_number).prune(int(ttl))
