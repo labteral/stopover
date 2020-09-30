@@ -1,10 +1,14 @@
-version: "3.4"
+version: "3.5"
 
 x-logging: &default-logging
   options:
     max-size: "10m"
     max-file: "5"
   driver: json-file
+
+networks:
+  stopover:
+    name: stopover
 
 services:
   stopover:
@@ -17,3 +21,5 @@ services:
       - 5704:5704
     logging: *default-logging
     restart: always
+    networks:
+      - stopover
