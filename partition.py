@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 import utils
 from os import makedirs
-from easyrocks import DB, WriteBatch
+from easyrocks import RocksDB, WriteBatch, Options, CompressionType
 from threading import Lock
 import logging
 
@@ -10,16 +10,24 @@ import logging
 class PartitionItem:
     def __init__(self, value: bytes = None, timestamp: int = None, item_bytes: bytes = None):
         if item_bytes is not None:
-            self.value, self.timestamp = self._load_from_bytes(item_bytes)
+            self._value, self._timestamp = self._load_from_bytes(item_bytes)
         else:
             if timestamp is None:
                 raise ValueError('the timestamp was not provided')
-            self.value = value
-            self.timestamp = timestamp
+            self._value = value
+            self._timestamp = timestamp
+
+    @property
+    def value(self):
+        return self._value
+
+    @property
+    def timestamp(self):
+        return self._timestamp
 
     @property
     def dict(self):
-        return {'value': self.value, 'timestamp': self.timestamp}
+        return {'value': self._value, 'timestamp': self._timestamp}
 
     @property
     def bytes(self):
@@ -41,7 +49,9 @@ class Partition:
             makedirs(partition_path)
         except FileExistsError:
             pass
-        self._store = DB(partition_path)
+
+        opts = {'compression': CompressionType.lz4_compression}
+        self._store = RocksDB(path=partition_path, opts=opts)
 
     def put(self, item: PartitionItem) -> int:
         with self.lock:
@@ -57,30 +67,35 @@ class Partition:
 
     def get(self, receiver: str) -> dict:
         receiver_index = self._get_offset(receiver) + 1
-        message_key = self._get_message_key(receiver_index)
-        stored_value = self._store.get(message_key)
+        partition_item = self.get_by_index(receiver_index)
 
         # Fast-forward the offset if messages were pruned
-        if stored_value is None:
+        if partition_item is None:
             with self.lock:
                 current_index = self._get_index()
-                while stored_value is None and receiver_index < current_index:
+                while partition_item is None and receiver_index < current_index:
                     self._increase_offset(receiver)
                     receiver_index = self._get_offset(receiver) + 1
-                    message_key = self._get_message_key(receiver_index)
-                    stored_value = self._store.get(message_key)
+                    partition_item = self.get_by_index(receiver_index)
 
-        if stored_value is None:
+        if partition_item is None:
             return
 
-        item = PartitionItem(item_bytes=stored_value).dict
-        item['index'] = receiver_index
-        return item
+        partition_item_dict = partition_item.dict
+        partition_item_dict['index'] = receiver_index
+        return partition_item_dict
+
+    def get_by_index(self, index: int) -> bytes:
+        message_key = self._get_message_key(index)
+        stored_bytes = self._store.get(message_key)
+
+        if stored_bytes is None:
+            return
+
+        partition_item = PartitionItem(item_bytes=stored_bytes)
+        return partition_item
 
     def commit(self, offset: int, receiver: str):
-        if offset < 0:
-            raise ValueError('the partition is empty')
-
         with self.lock:
             expected_offset = self._get_offset(receiver) + 1
             if offset != expected_offset:
