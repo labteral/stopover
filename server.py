@@ -8,13 +8,13 @@ import sys
 from broker import Broker
 from gunicorn.app.base import BaseApplication
 
-banner = """\033[93m
+banner = """
 ███████ ████████ ████████ ███████ ████████ ██    ██ ███████ ██████
 ██         ██    ██    ██ ██   ██ ██    ██ ██    ██ ██      ██   ██
 ███████    ██    ██    ██ ███████ ██    ██ ██    ██ █████   ██████
      ██    ██    ██    ██ ██      ██    ██  ██  ██  ██      ██   ██
 ███████    ██    ████████ ██      ████████   ████   ███████ ██   ██
-                                                Stopover v0.1-alpha\033[0m
+                                                Stopover v0.1-alpha
 """
 
 CONFIG_PATH = './config.yaml'
@@ -30,6 +30,7 @@ with open(CONFIG_PATH, 'r') as input_file:
 
 try:
     open(f"{config['global']['data_dir']}/streams/.active")
+    
 except FileNotFoundError:
     logging.critical('the streams dir is not active')
     sys.exit(4)

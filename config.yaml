@@ -7,6 +7,6 @@ global:
   partitions: 1
   ttl: 2592000 # 30 days
 
-# streams:
-#   stream0:
-#     partitions: 1
+streams:
+  stream0:
+    partitions: 4

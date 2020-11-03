@@ -39,7 +39,7 @@ class PartitionItem:
 
 
 class Partition:
-    def __init__(self, stream: str, number: int, data_dir: str):
+    def __init__(self, stream: str, number: int, data_dir: str, create_if_missing: bool = False):
         self.lock = Lock()
         self.stream = stream
         self.number = number
@@ -50,7 +50,15 @@ class Partition:
         except FileExistsError:
             pass
 
-        opts = {'compression': CompressionType.lz4_compression}
+        opts = {
+            'create_if_missing': create_if_missing,
+            'compression': CompressionType.lz4_compression,
+            'use_fsync': True,
+            'paranoid_checks': True,
+            'compaction_options_universal': {
+                'compression_size_percent': 0,
+            }
+        }
         self._store = RocksDB(path=partition_path, opts=opts)
 
     def put(self, item: PartitionItem) -> int:

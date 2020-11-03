@@ -232,27 +232,30 @@ class Broker:
             partition_numbers = []
             self.partitions_by_stream[stream] = partition_numbers
 
-            stream_exists = False
+            if 'streams' in self.config and stream in self.config['streams']:
+                partitions_target = self.config['streams'][stream]['partitions']
+            else:
+                partitions_target = self.config['global']['partitions']
+
             stream_path = self._get_stream_path(stream)
             if path.isdir(stream_path):
                 for partition_number in sorted(listdir(stream_path)):
                     try:
                         partition_numbers.append(int(partition_number))
-                        stream_exists = True
                     except ValueError:
                         continue
 
-            if not stream_exists:
-                if 'streams' in self.config and stream in self.config['streams']:
-                    partitions_to_create = self.config['streams'][stream]
-                else:
-                    partitions_to_create = self.config['global']
+            existing_partitions = len(partition_numbers)
+            if partitions_target > existing_partitions:
+                for partition_number in range(existing_partitions, partitions_target):
+                    if partition_number in partition_numbers:
+                        raise FileNotFoundError(f'missing partitions among {partition_numbers}')
 
-                for partition_number in range(0, partitions_to_create):
                     # Initialize new partitions
                     Partition(stream=stream,
                               number=partition_number,
-                              data_dir=self.config['global']['data_dir'])
+                              data_dir=self.config['global']['data_dir'],
+                              create_if_missing=True)
                     partition_numbers.append(partition_number)
 
             return self.partitions_by_stream[stream]
