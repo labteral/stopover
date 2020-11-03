@@ -28,12 +28,12 @@ RUN \
     pip install --upgrade pip \
     && pip install \
     cython==0.29.20 \
-    easyrocks \
+    easyrocks>=0.0.14a0 \
     pymongo==3.10.1 \
     python-snappy==0.5.4 \
     pyyaml==5.3.1 \
     gunicorn==20.0.4 \
-    falcon==3.0.0a1 \
+    falcon==3.0.0a2 \
     && apt-get -y purge $(diff -u init_pkgs current_pkgs | grep -E "^\+" | cut -d + -f2- | sed -n '1!p' | uniq) \
     && apt-get clean \
     && rm -rf init_pkgs current_pkgs /root/.cache/pip \
