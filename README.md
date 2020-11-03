@@ -6,7 +6,7 @@ touch ./data/streams/.active
 
 # Start the server
 ```bash
-gunicorn -w 1 --threads 16 --keep-alive 300 -b 0.0.0.0:8080 server:api
+gunicorn -w 1 --threads 16 --keep-alive 300 -b 0.0.0.0:5704 server:api
 ```
 
 # Usage example
@@ -18,7 +18,7 @@ pip install stopover
 ```python
 from stopover import Receiver
 
-sender = Sender('http://localhost:8080', 'stream0')
+sender = Sender('http://localhost:5704', 'stream0')
 
 index = 0
 while True:
@@ -30,7 +30,7 @@ while True:
 ```python
 from stopover import Receiver
 
-receiver = Receiver('http://localhost:8080', 'stream0', 'receiver1')
+receiver = Receiver('http://localhost:5704', 'stream0', 'receiver1')
 
 for message in receiver.get():
     print(message.index, message.value)
