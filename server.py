@@ -9,17 +9,16 @@ from broker import Broker
 from gunicorn.app.base import BaseApplication
 
 banner = """
-███████ ████████ ████████ ███████ ████████ ██    ██ ███████ ██████
-██         ██    ██    ██ ██   ██ ██    ██ ██    ██ ██      ██   ██
-███████    ██    ██    ██ ███████ ██    ██ ██    ██ █████   ██████
-     ██    ██    ██    ██ ██      ██    ██  ██  ██  ██      ██   ██
-███████    ██    ████████ ██      ████████   ████   ███████ ██   ██
-                                                Stopover v0.1-alpha
+████████ ████████ ████████ ███████ ████████ ██    ██ ████████ ███████
+██          ██    ██    ██ ██   ██ ██    ██ ██    ██ ██       ██   ██
+████████    ██    ██    ██ █████   ██    ██ ██    ██ █████    █████
+      ██    ██    ██    ██ ██      ██    ██  ██  ██  ██       ██   ██
+████████    ██    ████████ ██      ████████   ████   ████████ ██   ██
+                                                        Stopover v0.1
 """
 
 CONFIG_PATH = './config.yaml'
 
-# logging.getLogger().setLevel(logging.DEBUG)
 logging.getLogger().setLevel(logging.INFO)
 logging.basicConfig(format='%(asctime)-15s [%(levelname)s] %(message)s',
                     datefmt='%Y-%m-%d %H:%M:%S')
@@ -30,7 +29,7 @@ with open(CONFIG_PATH, 'r') as input_file:
 
 try:
     open(f"{config['global']['data_dir']}/streams/.active")
-    
+
 except FileNotFoundError:
     logging.critical('the streams dir is not active')
     sys.exit(4)

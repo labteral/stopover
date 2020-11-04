@@ -27,6 +27,7 @@ def log_errors(method):
 class Broker:
     def __init__(self, config):
         self.config = config
+        logging.info(f'config: {json.dumps(config, indent=2)}')
 
         self.partitions_by_stream_lock = Lock()
         self.partitions_by_stream = {}
