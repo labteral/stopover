@@ -368,5 +368,5 @@ class Broker:
                         ttl = self.config['global']['ttl']
 
                     for partition_number in partition_numbers:
-                        logging.debug(f'pruning partition {partition_number} of stream {stream}...')
+                        logging.info(f'pruning partition {partition_number} of stream {stream}...')
                         self._get_partition(stream, partition_number).prune(int(ttl))
