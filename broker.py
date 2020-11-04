@@ -93,13 +93,7 @@ class Broker:
 
         timestamp = utils.get_timestamp_ms()
         item = PartitionItem(value, timestamp)
-
         index = partition.put(item)
-
-        # Check that the item has been stored correctly
-        stored_partition_item = partition.get_by_index(index)
-        assert stored_partition_item.value == value
-        assert stored_partition_item.timestamp == timestamp
 
         return {
             'stream': stream,
