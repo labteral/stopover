@@ -1,7 +1,0 @@
-cython==0.29.20
-easyrocks
-pymongo==3.10.1
-python-snappy==0.5.4
-pyyaml==5.3.1
-gunicorn==20.0.4
-falcon==3.0.0a1

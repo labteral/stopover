@@ -1,3 +1,3 @@
 #!/bin/bash
-export STOPOVER_VERSION=20.07
+export STOPOVER_VERSION=20.11
 export ROCKSDB_VERSION=6.10.2
