@@ -323,7 +323,8 @@ class Broker:
                     f'receiver "{receiver}" kicked from the receiver_group "{receiver_group}" for the stream "{stream}"'
                 )
                 del self.partitions_by_group[stream][receiver_group][receiver]
-                del self.last_seen_by_group[receiver_group][receiver]
+                if receiver in self.last_seen_by_group[receiver_group]:
+                    del self.last_seen_by_group[receiver_group][receiver]
 
             # Remove empty groups
             groups_to_remove = []
