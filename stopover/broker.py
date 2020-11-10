@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from stopover import version
 from partition import Partition, PartitionItem
 from os import listdir, path
 from threading import Lock, Thread
@@ -43,6 +44,10 @@ class Broker:
 
         Thread(target=self._rebalance_loop, daemon=True).start()
         Thread(target=self._prune_loop, daemon=True).start()
+
+    def on_get(self, request, response):
+        response.content_type = 'text/html; charset=utf-8'
+        response.body = f'Labteral Stopover {version}'
 
     def on_post(self, request, response):
         data = utils.unpack(utils.decompress(request.stream.read()))
