@@ -48,5 +48,5 @@ class Server(BaseApplication):
 
 
 if __name__ == "__main__":
-    options = {'bind': f"0.0.0.0:5704", 'workers': 1, 'threads': 16, 'keepalive': 300, 'timeout': 0}
+    options = {'bind': "0.0.0.0:5704", 'workers': 1, 'threads': 16, 'keepalive': 300, 'timeout': 0}
     Server(api, options).run()

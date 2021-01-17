@@ -270,7 +270,7 @@ class Broker:
 
     def _rebalance(self):
         with self.partitions_by_group_lock:
-            logging.debug(f'rebalancing...')
+            logging.debug('rebalancing...')
 
             logging.info(f'partition assignments: {json.dumps(self.partitions_by_group, indent=4)}')
 
