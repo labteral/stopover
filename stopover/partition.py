@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 import utils
 from os import makedirs
-from easyrocks import RocksDB, WriteBatch, Options, CompressionType
+from easyrocks import RocksDB, WriteBatch, CompressionType
 from threading import Lock
 import logging
 
