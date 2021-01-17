@@ -128,8 +128,7 @@ class Partition:
             item_timestamp = int(PartitionItem(item_bytes=value).timestamp / 1000)
             if current_timestamp - item_timestamp < ttl:
                 break
-            else:
-                keys_to_delete.append(key)
+            keys_to_delete.append(key)
 
         for key in keys_to_delete:
             logging.debug(f'Deleting {key}')
