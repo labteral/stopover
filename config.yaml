@@ -8,5 +8,5 @@ global:
   ttl: 2592000 # 30 days
 
 streams:
-  stream0:
+  test:
     partitions: 4

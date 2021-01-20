@@ -27,13 +27,13 @@ RUN \
 RUN \
     pip install --upgrade pip \
     && pip install \
-    cython==0.29.20 \
-    easyrocks>=0.0.14a0 \
-    pymongo==3.10.1 \
-    python-snappy==0.5.4 \
-    pyyaml==5.3.1 \
-    gunicorn==20.0.4 \
-    falcon==3.0.0a2 \
+    "cython==0.29.20" \
+    "easyrocks>=0.0.14a0" \
+    "pymongo==3.10.1" \
+    "python-snappy==0.5.4" \
+    "pyyaml==5.3.1" \
+    "falcon==3.0.0a2" \
+    "cherrybone>=0.0.4b0" \
     && apt-get -y purge $(diff -u init_pkgs current_pkgs | grep -E "^\+" | cut -d + -f2- | sed -n '1!p' | uniq) \
     && apt-get clean \
     && rm -rf init_pkgs current_pkgs /root/.cache/pip \
@@ -42,5 +42,4 @@ RUN \
 ADD stopover.tar /opt/stopover
 WORKDIR /opt/stopover
 
-ENTRYPOINT ["gunicorn", "server:api", "--workers", "1", "--bind", "0.0.0.0:5704"]
-CMD ["--threads", "16", "--keep-alive", "300"]
+ENTRYPOINT python server.py

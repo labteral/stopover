@@ -7,7 +7,7 @@ import falcon
 import logging
 import yaml
 import sys
-from gunicorn.app.base import BaseApplication
+from cherrybone import Server
 
 CONFIG_PATH = './config.yaml'
 
@@ -29,24 +29,5 @@ except FileNotFoundError:
 api = falcon.App()
 api.add_route('/', Broker(config))
 
-
-class Server(BaseApplication):
-    def __init__(self, app, options=None):
-        self.app = app
-        self.options = options or {}
-        super(Server, self).__init__()
-
-    def load_config(self):
-        for key, value in self.options.items():
-            self.cfg.set(key, value)
-
-    def load(self):
-        return self.app
-
-    def run(self):
-        super().run()
-
-
 if __name__ == "__main__":
-    options = {'bind': "0.0.0.0:5704", 'workers': 1, 'threads': 16, 'keepalive': 300, 'timeout': 0}
-    Server(api, options).run()
+    Server(api, port=5704).start()
