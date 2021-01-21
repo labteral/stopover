@@ -45,7 +45,8 @@ class Broker:
         Thread(target=self._rebalance_loop, daemon=True).start()
         Thread(target=self._prune_loop, daemon=True).start()
 
-    def on_get(self, request, response):
+    @staticmethod
+    def on_get(request, response):
         response.content_type = 'text/html; charset=utf-8'
         response.body = f'Labteral Stopover {version}'
 

@@ -33,7 +33,8 @@ class PartitionItem:
     def bytes(self):
         return utils.pack(self.dict)
 
-    def _load_from_bytes(self, value):
+    @staticmethod
+    def _load_from_bytes(value):
         value = utils.unpack(value)
         return value['value'], value['timestamp']
 
@@ -160,15 +161,18 @@ class Partition:
         offset += 1
         self._store.put(offset_key, offset)
 
-    def _get_index_key(self):
+    @staticmethod
+    def _get_index_key():
         index_key = utils.get_padded_string('', prefix='_index:')
         return index_key
 
-    def _get_offset_key(self, receiver):
+    @staticmethod
+    def _get_offset_key(receiver):
         offset_key = utils.get_padded_string(receiver, prefix='_offset:')
         return offset_key
 
-    def _get_message_key(self, index):
+    @staticmethod
+    def _get_message_key(index):
         message_key = utils.get_padded_string(str(index), prefix='message:')
         return message_key
 
