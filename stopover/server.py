@@ -32,7 +32,7 @@ api.add_route('/', Broker(config))
 
 if __name__ == "__main__":
     threads = None
-    if config['threads'] > 0:
-        threads = config['threads']
+    if 'threads' in config['global'] and config['global']['threads'] > 0:
+        threads = config['global']['threads']
 
     Server(api, port=5704, threads=threads).start()
