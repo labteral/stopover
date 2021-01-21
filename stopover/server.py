@@ -8,6 +8,7 @@ import logging
 import yaml
 import sys
 from cherrybone import Server
+from os import environ
 
 CONFIG_PATH = './config.yaml'
 
@@ -24,10 +25,14 @@ try:
 
 except FileNotFoundError:
     logging.critical('the streams dir is not active')
-    sys.exit(4)
+    sys.exit(1)
 
 api = falcon.App()
 api.add_route('/', Broker(config))
 
 if __name__ == "__main__":
-    Server(api, port=5704).start()
+    threads = None
+    if config['threads'] > 0:
+        threads = config['threads']
+
+    Server(api, port=5704, threads=threads).start()

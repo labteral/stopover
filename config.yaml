@@ -6,6 +6,7 @@ global:
   prune_interval: 3600
   partitions: 1
   ttl: 2592000 # 30 days
+  threads: -1
 
 streams:
   test:
