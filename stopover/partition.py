@@ -77,7 +77,7 @@ class Partition:
     def get(self, receiver: str) -> dict:
         with self.lock:
             receiver_index = self._get_offset(receiver) + 1
-            partition_item = self.get_by_index(receiver_index)
+            partition_item = self._get_by_index(receiver_index)
 
             # Fast-forward the offset if messages were pruned
             if partition_item is None:
@@ -85,7 +85,7 @@ class Partition:
                 while partition_item is None and receiver_index < current_index:
                     self._increase_offset(receiver)
                     receiver_index = self._get_offset(receiver) + 1
-                    partition_item = self.get_by_index(receiver_index)
+                    partition_item = self._get_by_index(receiver_index)
 
             if partition_item is None:
                 return
@@ -93,16 +93,6 @@ class Partition:
             partition_item_dict = partition_item.dict
             partition_item_dict['index'] = receiver_index
             return partition_item_dict
-
-    def get_by_index(self, index: int) -> bytes:
-        message_key = self._get_message_key(index)
-        stored_bytes = self._store.get(message_key)
-
-        if stored_bytes is None:
-            return
-
-        partition_item = PartitionItem(item_bytes=stored_bytes)
-        return partition_item
 
     def commit(self, offset: int, receiver: str):
         with self.lock:
@@ -137,6 +127,16 @@ class Partition:
             for key in keys_to_delete:
                 logging.debug(f'Deleting {key}')
                 self._store.delete(key)
+
+    def _get_by_index(self, index: int) -> bytes:
+        message_key = self._get_message_key(index)
+        stored_bytes = self._store.get(message_key)
+
+        if stored_bytes is None:
+            return
+
+        partition_item = PartitionItem(item_bytes=stored_bytes)
+        return partition_item
 
     def _get_index(self):
         index_key = self._get_index_key()
