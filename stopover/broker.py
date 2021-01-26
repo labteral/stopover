@@ -39,7 +39,6 @@ class Broker:
         self.partitions_by_group_lock = Lock()
         self.partitions_by_group = {}
 
-        self.partition_locks = {}
         self.partitions = {}
 
         Thread(target=self._rebalance_loop, daemon=True).start()
@@ -89,17 +88,15 @@ class Broker:
         partition_number = None if 'partition' not in params else params['partition']
 
         partition_numbers = self._get_stream_partition_numbers(stream)
-
         if partition_number is None:
             partition_number = utils.get_partition_number(partition_numbers, key)
-
         elif partition_number not in partition_numbers:
             raise ValueError('partition does not exist')
 
-        partition = self._get_partition(stream=stream, partition_number=partition_number)
-
         timestamp = utils.get_timestamp_ms()
         item = PartitionItem(value, timestamp)
+
+        partition = self._get_partition(stream, partition_number)
         index = partition.put(item)
 
         return {
@@ -162,8 +159,8 @@ class Broker:
             partition_number = receiver_partition_numbers.pop(partition_index)
 
             partition = self._get_partition(stream, partition_number)
-
             item = partition.get(receiver_group)
+
             if item is None:
                 continue
 
@@ -189,7 +186,9 @@ class Broker:
         try:
             partition = self._get_partition(stream, partition_number)
             partition.commit(index, receiver_group)
+
             return {'stream': stream, 'partition': partition_number, 'index': index, 'status': 'ok'}
+
         except ValueError as error:
             return {
                 'stream': stream,
@@ -208,19 +207,17 @@ class Broker:
 
         partition = self._get_partition(stream, partition_number)
         partition.set_offset(receiver_group, index)
+
         return {'stream': stream, 'partition': partition_number, 'index': index, 'status': 'ok'}
 
     def _get_partition(self, stream: str, partition_number: int):
-        with self._get_partition_lock(stream, partition_number):
-            if stream not in self.partitions:
-                self.partitions[stream] = {}
+        if stream not in self.partitions:
+            self.partitions[stream] = {}
 
-            if partition_number not in self.partitions[stream]:
-                self.partitions[stream][partition_number] = Partition(
-                    stream=stream,
-                    number=partition_number,
-                    data_dir=self.config['global']['data_dir'])
-            return self.partitions[stream][partition_number]
+        if partition_number not in self.partitions[stream]:
+            self.partitions[stream][partition_number] = Partition(
+                stream=stream, number=partition_number, data_dir=self.config['global']['data_dir'])
+        return self.partitions[stream][partition_number]
 
     def _get_stream_path(self, stream: str) -> str:
         return f"{self.config['global']['data_dir']}/streams/{stream}/"
@@ -344,15 +341,6 @@ class Broker:
             for stream in streams_to_remove:
                 del self.partitions_by_group[stream]
 
-    def _get_partition_lock(self, stream: str, partition_number: int) -> Lock:
-        if stream not in self.partition_locks:
-            self.partition_locks[stream] = {}
-
-        if partition_number not in self.partition_locks[stream]:
-            self.partition_locks[stream][partition_number] = Lock()
-
-        return self.partition_locks[stream][partition_number]
-
     def _prune_loop(self):
         while True:
             time.sleep(self.config['global']['prune_interval'])
@@ -377,4 +365,6 @@ class Broker:
 
                     for partition_number in partition_numbers:
                         logging.info(f'pruning partition {partition_number} of stream {stream}...')
-                        self._get_partition(stream, partition_number).prune(int(ttl))
+
+                        partition = self._get_partition(stream, partition_number)
+                        partition.prune(int(ttl))

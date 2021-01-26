@@ -75,24 +75,24 @@ class Partition:
             return index
 
     def get(self, receiver: str) -> dict:
-        receiver_index = self._get_offset(receiver) + 1
-        partition_item = self.get_by_index(receiver_index)
+        with self.lock:
+            receiver_index = self._get_offset(receiver) + 1
+            partition_item = self.get_by_index(receiver_index)
 
-        # Fast-forward the offset if messages were pruned
-        if partition_item is None:
-            with self.lock:
+            # Fast-forward the offset if messages were pruned
+            if partition_item is None:
                 current_index = self._get_index()
                 while partition_item is None and receiver_index < current_index:
                     self._increase_offset(receiver)
                     receiver_index = self._get_offset(receiver) + 1
                     partition_item = self.get_by_index(receiver_index)
 
-        if partition_item is None:
-            return
+            if partition_item is None:
+                return
 
-        partition_item_dict = partition_item.dict
-        partition_item_dict['index'] = receiver_index
-        return partition_item_dict
+            partition_item_dict = partition_item.dict
+            partition_item_dict['index'] = receiver_index
+            return partition_item_dict
 
     def get_by_index(self, index: int) -> bytes:
         message_key = self._get_message_key(index)
@@ -113,11 +113,12 @@ class Partition:
             self._increase_offset(receiver)
 
     def set_offset(self, receiver: str, offset: int):
-        index = self._get_index()
-        if offset >= index:
-            offset = index - 1
-        offset_key = self._get_offset_key(receiver)
-        self._store.put(offset_key, offset)
+        with self.lock:
+            index = self._get_index()
+            if offset >= index:
+                offset = index - 1
+            offset_key = self._get_offset_key(receiver)
+            self._store.put(offset_key, offset)
 
     def prune(self, ttl):
         if not ttl:
@@ -125,15 +126,17 @@ class Partition:
 
         current_timestamp = utils.get_timestamp()
         keys_to_delete = []
-        for key, value in self._store.scan(prefix='message:'):
-            item_timestamp = int(PartitionItem(item_bytes=value).timestamp / 1000)
-            if current_timestamp - item_timestamp < ttl:
-                break
-            keys_to_delete.append(key)
 
-        for key in keys_to_delete:
-            logging.debug(f'Deleting {key}')
-            self._store.delete(key)
+        with self.lock:
+            for key, value in self._store.scan(prefix='message:'):
+                item_timestamp = int(PartitionItem(item_bytes=value).timestamp / 1000)
+                if current_timestamp - item_timestamp < ttl:
+                    break
+                keys_to_delete.append(key)
+
+            for key in keys_to_delete:
+                logging.debug(f'Deleting {key}')
+                self._store.delete(key)
 
     def _get_index(self):
         index_key = self._get_index_key()
