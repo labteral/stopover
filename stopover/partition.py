@@ -178,7 +178,3 @@ class Partition:
     def _get_message_key(index):
         message_key = utils.get_padded_string(str(index), prefix='message:')
         return message_key
-
-    def scan(self):
-        for key, value in self._store.scan():
-            print(key, value)
