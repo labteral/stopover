@@ -111,15 +111,14 @@ class Partition:
             self._store.put(offset_key, offset)
 
     def prune(self, ttl):
-        if not ttl:
-            return
+        ttl *= 1000  # milliseconds
 
-        current_timestamp = utils.get_timestamp()
+        current_timestamp = utils.get_timestamp_ms()
         keys_to_delete = []
 
         with self.lock:
             for key, value in self._store.scan(prefix='message:'):
-                item_timestamp = int(PartitionItem(item_bytes=value).timestamp / 1000)
+                item_timestamp = int(PartitionItem(item_bytes=value).timestamp)
                 if current_timestamp - item_timestamp < ttl:
                     break
                 keys_to_delete.append(key)

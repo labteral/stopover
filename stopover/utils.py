@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import bson
+import msgpack
 import snappy
 import json
 import time
@@ -9,22 +9,14 @@ import random
 import hashlib
 
 
-def get_padded_string(string, prefix='', size=64):
-    zeros = size - len(string) - len(prefix)
-    if zeros < 0:
-        raise ValueError
-    padded_string = f"{prefix}{zeros * '0'}{string}"
-    return padded_string
-
-
 def pack(message: dict) -> bytes:
-    return bson.encode(message)
+    return msgpack.packb(message)
 
 
 def unpack(message: bytes) -> dict:
     try:
-        return bson.decode(message)
-    except bson.errors.InvalidBSON:
+        return msgpack.unpackb(message)
+    except Exception:
         return json.loads(message)
 
 
@@ -43,12 +35,16 @@ def get_timestamp_ms() -> int:
     return int(round(time.time() * 1000))
 
 
-def get_timestamp() -> int:
-    return int(round(time.time()))
-
-
 def string_to_sha3_256(text: str):
     return hashlib.sha3_256(text.encode('utf-8')).hexdigest()
+
+
+def get_padded_string(string, prefix='', size=64):
+    zeros = size - len(string) - len(prefix)
+    if zeros < 0:
+        raise ValueError
+    padded_string = f"{prefix}{zeros * '0'}{string}"
+    return padded_string
 
 
 # Max 1024 partitions for key-based partition assignment

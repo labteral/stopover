@@ -29,7 +29,7 @@ RUN \
     && pip install \
     "cython==0.29.20" \
     "easyrocks>=0.0.14a0" \
-    "pymongo==3.10.1" \
+    "msgpack==1.0.2" \
     "python-snappy==0.5.4" \
     "pyyaml==5.3.1" \
     "falcon==3.0.0b1" \
