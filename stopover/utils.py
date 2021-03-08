@@ -14,10 +14,7 @@ def pack(message: dict) -> bytes:
 
 
 def unpack(message: bytes) -> dict:
-    try:
-        return msgpack.unpackb(message)
-    except Exception:
-        return json.loads(message)
+    return msgpack.unpackb(message)
 
 
 def compress(message: bytes) -> bytes:
@@ -25,10 +22,7 @@ def compress(message: bytes) -> bytes:
 
 
 def decompress(message: bytes) -> bytes:
-    try:
-        return snappy.decompress(message)
-    except snappy.UncompressError:
-        return message
+    return snappy.decompress(message)
 
 
 def get_timestamp_ms() -> int:

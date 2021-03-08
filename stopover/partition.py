@@ -118,7 +118,7 @@ class Partition:
 
         with self.lock:
             for key, value in self._store.scan(prefix='message:'):
-                item_timestamp = int(PartitionItem(item_bytes=value).timestamp)
+                item_timestamp = PartitionItem(item_bytes=value).timestamp
                 if current_timestamp - item_timestamp < ttl:
                     break
                 keys_to_delete.append(key)

@@ -51,7 +51,14 @@ class Broker:
         response.body = f'Labteral Stopover {version}'
 
     def on_post(self, request, response):
-        data = utils.unpack(utils.decompress(request.stream.read()))
+        bin_data = request.stream.read()
+
+        if bin_data[:1] == b'{':
+            # JSON
+            data = json.loads(bin_data)
+        else:
+            # MessagePack
+            data = utils.unpack(utils.decompress(bin_data))
 
         if 'method' not in data:
             response.status = falcon.HTTP_400
