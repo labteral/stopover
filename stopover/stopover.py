@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-version = 'v21.03.1'
+version = '21.03.1'
 
 banner = f"""
   ███████████                             ███████████
