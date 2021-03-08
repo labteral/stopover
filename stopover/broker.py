@@ -39,6 +39,7 @@ class Broker:
         self.partitions_by_group_lock = Lock()
         self.partitions_by_group = {}
 
+        self.partitions_lock = Lock()
         self.partitions = {}
 
         Thread(target=self._rebalance_loop, daemon=True).start()
@@ -211,12 +212,15 @@ class Broker:
         return {'stream': stream, 'partition': partition_number, 'index': index, 'status': 'ok'}
 
     def _get_partition(self, stream: str, partition_number: int):
-        if stream not in self.partitions:
-            self.partitions[stream] = {}
+        with self.partitions_lock:
+            if stream not in self.partitions:
+                self.partitions[stream] = {}
 
-        if partition_number not in self.partitions[stream]:
-            self.partitions[stream][partition_number] = Partition(
-                stream=stream, number=partition_number, data_dir=self.config['global']['data_dir'])
+            if partition_number not in self.partitions[stream]:
+                self.partitions[stream][partition_number] = Partition(
+                    stream=stream,
+                    number=partition_number,
+                    data_dir=self.config['global']['data_dir'])
         return self.partitions[stream][partition_number]
 
     def _get_stream_path(self, stream: str) -> str:
