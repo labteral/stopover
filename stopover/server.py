@@ -8,7 +8,6 @@ import logging
 import yaml
 import sys
 from cherrybone import Server
-from os import environ
 
 CONFIG_PATH = './config.yaml'
 
