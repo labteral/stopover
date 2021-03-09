@@ -3,7 +3,6 @@
 
 import msgpack
 import snappy
-import json
 import time
 import random
 import hashlib
