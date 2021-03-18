@@ -83,7 +83,7 @@ class Partition:
                     partition_item = self._get_by_index(receiver_index)
 
             if partition_item is None:
-                return
+                return None
 
             partition_item_dict = partition_item.dict
             partition_item_dict['index'] = receiver_index
@@ -131,7 +131,7 @@ class Partition:
         message_key = self._get_message_key(index)
         value = self._store.get(message_key)
         if value is None:
-            return
+            return None
 
         # Backwards compatibility
         if isinstance(value, bytes):
