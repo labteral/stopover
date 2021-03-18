@@ -285,7 +285,7 @@ class Broker:
 
             receivers_to_remove = []
 
-            for stream in self.partitions_by_group.keys():
+            for stream in self.partitions_by_group:
 
                 for receiver_group in self.partitions_by_group[stream].keys():
                     stream_receiver_group_receivers = []
@@ -337,7 +337,7 @@ class Broker:
 
             # Remove empty groups
             groups_to_remove = []
-            for stream in self.partitions_by_group.keys():
+            for stream in self.partitions_by_group:
                 for receiver_group in self.partitions_by_group[stream].keys():
                     if not self.partitions_by_group[stream][receiver_group]:
                         groups_to_remove.append((stream, receiver_group))
@@ -346,7 +346,7 @@ class Broker:
 
             # Remove streams without assignments
             streams_to_remove = []
-            for stream in self.partitions_by_group.keys():
+            for stream in self.partitions_by_group:
                 if not self.partitions_by_group[stream]:
                     streams_to_remove.append(stream)
             for stream in streams_to_remove:
