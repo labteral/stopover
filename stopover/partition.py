@@ -8,9 +8,9 @@ import logging
 
 
 class PartitionItem:
-    def __init__(self, value: bytes = None, timestamp: int = None, item_bytes: bytes = None):
-        if item_bytes is not None:
-            self._value, self._timestamp = self._load_from_bytes(item_bytes)
+    def __init__(self, value: bytes = None, timestamp: int = None, item_dict: dict = None):
+        if item_dict is not None:
+            self._load_from_dict(item_dict)
         else:
             if timestamp is None:
                 raise ValueError('the timestamp was not provided')
@@ -29,14 +29,9 @@ class PartitionItem:
     def dict(self):
         return {'value': self._value, 'timestamp': self._timestamp}
 
-    @property
-    def bytes(self):
-        return utils.pack(self.dict)
-
-    @staticmethod
-    def _load_from_bytes(value):
-        value = utils.unpack(value)
-        return value['value'], value['timestamp']
+    def _load_from_dict(self, value: dict):
+        self._value = value['value']
+        self._timestamp = value['timestamp']
 
 
 class Partition:
@@ -68,7 +63,7 @@ class Partition:
             message_key = self._get_message_key(index)
 
             write_batch = WriteBatch()
-            self._store.put(message_key, item.bytes, write_batch=write_batch)
+            self._store.put(message_key, item.dict, write_batch=write_batch)
             self._increase_index(write_batch)
             self._store.commit(write_batch)
 
@@ -118,7 +113,12 @@ class Partition:
 
         with self.lock:
             for key, value in self._store.scan(prefix='message:'):
-                item_timestamp = PartitionItem(item_bytes=value).timestamp
+
+                # Backwards compatibility
+                if isinstance(value, bytes):
+                    value = utils.unpack(value)
+
+                item_timestamp = PartitionItem(item_dict=value).timestamp
                 if current_timestamp - item_timestamp < ttl:
                     break
                 keys_to_delete.append(key)
@@ -129,12 +129,15 @@ class Partition:
 
     def _get_by_index(self, index: int) -> bytes:
         message_key = self._get_message_key(index)
-        stored_bytes = self._store.get(message_key)
-
-        if stored_bytes is None:
+        value = self._store.get(message_key)
+        if value is None:
             return
 
-        partition_item = PartitionItem(item_bytes=stored_bytes)
+        # Backwards compatibility
+        if isinstance(value, bytes):
+            value = utils.unpack(value)
+
+        partition_item = PartitionItem(item_dict=value)
         return partition_item
 
     def _get_index(self):
