@@ -288,21 +288,19 @@ class Broker:
     def _rebalance_loop(self):
         while True:
             self._rebalance()
+            remaining_seconds = self.config['global']['rebalance_interval']
             logging.debug(
-                f"next rebalance: {self.config['global']['rebalance_interval']} seconds"
-            )
+                f"next rebalance will hapen in {remaining_seconds} seconds")
             time.sleep(self.config['global']['rebalance_interval'])
 
     def _rebalance(self):
         with self.partitions_by_group_lock:
             logging.debug('rebalancing...')
-
             logging.info(
-                f'partition assignments: {json.dumps(self.partitions_by_group, indent=4)}'
+                f'assignments: {json.dumps(self.partitions_by_group, indent=4)}'
             )
 
             receivers_to_remove = []
-
             for stream in self.partitions_by_group:
 
                 for receiver_group in self.partitions_by_group[stream].keys():
@@ -323,8 +321,8 @@ class Broker:
                             receivers_to_remove.append(
                                 (stream, receiver_group, receiver))
 
-                    stream_partition_numbers = self._get_stream_partition_numbers(
-                        stream)
+                    stream_partition_numbers = \
+                        self._get_stream_partition_numbers(stream)
 
                     number_of_partitions = len(stream_partition_numbers)
                     number_of_receivers = len(stream_receiver_group_receivers)
@@ -393,8 +391,10 @@ class Broker:
                         except ValueError:
                             continue
 
-                    stream_with_defined_ttl = 'streams' in self.config and stream in self.config[
-                        'streams'] and 'ttl' in self.config['streams'][stream]
+                    stream_with_defined_ttl = \
+                        'streams' in self.config \
+                        and stream in self.config['streams'] \
+                        and 'ttl' in self.config['streams'][stream]
 
                     if stream_with_defined_ttl:
                         ttl = self.config['streams'][stream]['ttl']
@@ -403,8 +403,7 @@ class Broker:
 
                     for partition_number in partition_numbers:
                         logging.info(
-                            f'pruning partition {partition_number} of stream {stream}...'
-                        )
+                            f'pruning stream {stream} ({partition_number})')
 
                         partition = self._get_partition(stream,
                                                         partition_number)
