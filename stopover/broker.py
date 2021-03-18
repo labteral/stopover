@@ -61,7 +61,7 @@ class Broker:
             data = utils.unpack(utils.decompress(bin_data))
 
         if 'method' not in data:
-            response.status = falcon.HTTP_400
+            response.status = falcon.status_codes.HTTP_400
             return
         method = data['method']
         params = data['params']
@@ -83,10 +83,10 @@ class Broker:
                 response.media = self.set_offset(params)
 
         except KeyError:
-            response.status = falcon.HTTP_400
+            response.status = falcon.status_codes.HTTP_400
 
         except Exception:
-            response.status = falcon.HTTP_500
+            response.status = falcon.status_codes.HTTP_500
 
     @log_errors
     def put_message(self, params: dict) -> dict:
