@@ -121,7 +121,7 @@ class Broker:
         receiver = params['receiver']
 
         with self.last_seen_by_group_lock:
-            if not receiver_group in self.last_seen_by_group:
+            if receiver_group not in self.last_seen_by_group:
                 self.last_seen_by_group[receiver_group] = {}
             self.last_seen_by_group[receiver_group][receiver] = utils.get_timestamp_ms()
 
