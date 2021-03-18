@@ -5,10 +5,14 @@ from os import makedirs
 from easyrocks import RocksDB, WriteBatch, CompressionType
 from threading import Lock
 import logging
+from typing import Dict
 
 
 class PartitionItem:
-    def __init__(self, value: bytes = None, timestamp: int = None, item_dict: dict = None):
+    def __init__(self,
+                 value: bytes = None,
+                 timestamp: int = None,
+                 item_dict: Dict = None):
         if item_dict is not None:
             self._load_from_dict(item_dict)
         else:
@@ -29,13 +33,17 @@ class PartitionItem:
     def dict(self):
         return {'value': self._value, 'timestamp': self._timestamp}
 
-    def _load_from_dict(self, value: dict):
+    def _load_from_dict(self, value: Dict):
         self._value = value['value']
         self._timestamp = value['timestamp']
 
 
 class Partition:
-    def __init__(self, stream: str, number: int, data_dir: str, create_if_missing: bool = False):
+    def __init__(self,
+                 stream: str,
+                 number: int,
+                 data_dir: str,
+                 create_if_missing: bool = False):
         self.lock = Lock()
         self.stream = stream
         self.number = number
@@ -94,7 +102,8 @@ class Partition:
             expected_offset = self._get_offset(receiver) + 1
             if offset != expected_offset:
                 raise ValueError(
-                    f'trying to commit offset {offset} but {expected_offset} was expected')
+                    f'trying to commit offset {offset} but expecting {expected_offset}'
+                )
             self._increase_offset(receiver)
 
     def set_offset(self, receiver: str, offset: int):
