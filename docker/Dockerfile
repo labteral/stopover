@@ -28,7 +28,7 @@ RUN \
     pip install --upgrade pip \
     && pip install \
     "cython==0.29.20" \
-    "easyrocks>=0.0.14a0" \
+    "easyrocks==0.0.16a0" \
     "msgpack==1.0.2" \
     "python-snappy==0.5.4" \
     "pyyaml==5.3.1" \
