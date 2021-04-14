@@ -28,11 +28,11 @@ RUN \
     pip install --upgrade pip \
     && pip install \
     "cython==0.29.20" \
-    "easyrocks>=0.0.14a0" \
+    "easyrocks==0.0.16a0" \
     "msgpack==1.0.2" \
     "python-snappy==0.5.4" \
     "pyyaml==5.3.1" \
-    "falcon==3.0.0b1" \
+    "falcon>=3.0.0" \
     "cherrybone>=0.0.4b0" \
     && apt-get -y purge $(diff -u init_pkgs current_pkgs | grep -E "^\+" | cut -d + -f2- | sed -n '1!p' | uniq) \
     && apt-get clean \
