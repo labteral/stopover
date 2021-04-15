@@ -98,8 +98,8 @@ class Broker:
 
         partition_numbers = self._get_stream_partition_numbers(stream)
         if partition_number is None:
-            partition_number = utils.get_partition_number(
-                partition_numbers, key)
+            partition_number = \
+                utils.get_partition_number(partition_numbers, key)
         elif partition_number not in partition_numbers:
             raise ValueError('partition does not exist')
 
@@ -276,7 +276,6 @@ class Broker:
                         raise FileNotFoundError(
                             f'missing partitions among {partition_numbers}')
 
-                    # Initialize new partitions
                     Partition(stream=stream,
                               number=partition_number,
                               data_dir=self.config['global']['data_dir'],
