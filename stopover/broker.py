@@ -255,9 +255,9 @@ class Broker:
             partition_numbers = []
             self.partitions_by_stream[stream] = partition_numbers
 
-            if 'streams' in self.config and stream in self.config['streams']:
+            try:
                 partitions_target = self.config['streams'][stream]['partitions']
-            else:
+            except KeyError:
                 partitions_target = self.config['global']['partitions']
 
             stream_path = self._get_stream_path(stream)
