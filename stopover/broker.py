@@ -312,8 +312,8 @@ class Broker:
                             self.last_seen_by_group[receiver_group][receiver]
                         ) / 1000
 
-                        if receiver_unseen_time < self.config['global'][
-                                'receiver_timeout']:
+                        if receiver_unseen_time \
+                        < self.config['global']['receiver_timeout']:
                             stream_receiver_group_receivers.append(receiver)
 
                         else:
@@ -352,9 +352,9 @@ class Broker:
                                     stream_partition_numbers[index])
 
             for stream, receiver_group, receiver in receivers_to_remove:
-                logging.info(
-                    f'receiver "{receiver}" kicked from the receiver_group \
-                        "{receiver_group}" for the stream "{stream}"')
+                logging.info(f'receiver "{receiver}" kicked from the ' \
+                    f'receiver_group "{receiver_group}" ' \
+                    f'for the stream "{stream}"')
                 del self.partitions_by_group[stream][receiver_group][receiver]
                 if receiver in self.last_seen_by_group[receiver_group]:
                     del self.last_seen_by_group[receiver_group][receiver]
