@@ -129,7 +129,7 @@ class Partition:
         keys_to_delete = []
 
         with self.lock:
-            for key, value in self._store.scan(prefix='message:'):
+            for key, value in self._store.scan(prefix=Partition.MESSAGE):
 
                 # Backwards compatibility
                 if isinstance(value, bytes):
