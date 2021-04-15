@@ -3,9 +3,13 @@
 import utils
 from os import makedirs
 from easyrocks import RocksDB, WriteBatch, CompressionType
+from easyrocks.utils import int_to_padded_bytes
 from threading import Lock
 import logging
 from typing import Dict
+
+UINT_BYTES = 8
+MAX_UINT = 2**(UINT_BYTES * 8) - 1
 
 
 class PartitionItem:
@@ -39,6 +43,10 @@ class PartitionItem:
 
 
 class Partition:
+    MESSAGE = b'\x00'
+    INDEX = b'\x01'
+    OFFSET = b'\x02'
+
     def __init__(self,
                  stream: str,
                  number: int,
@@ -114,7 +122,7 @@ class Partition:
             offset_key = self._get_offset_key(receiver)
             self._store.put(offset_key, offset)
 
-    def prune(self, ttl):
+    def prune(self, ttl: int):
         ttl *= 1000  # milliseconds
 
         current_timestamp = utils.get_timestamp_ms()
@@ -149,43 +157,40 @@ class Partition:
         partition_item = PartitionItem(item_dict=value)
         return partition_item
 
-    def _get_index(self):
-        index_key = self._get_index_key()
+    def _get_index(self) -> int:
+        index_key = Partition.INDEX
         index = self._store.get(index_key)
         if index is None:
             index = -1
         return index
 
-    def _increase_index(self, write_batch):
-        index_key = self._get_index_key()
-        index = self._get_index()
-        index += 1
-        self._store.put(index_key, index, write_batch=write_batch)
-
-    def _get_offset(self, receiver: str):
+    def _get_offset(self, receiver: str) -> int:
         offset_key = self._get_offset_key(receiver)
         offset = self._store.get(offset_key)
         if offset is None:
             offset = -1
         return offset
 
+    def _increase_index(self, write_batch: WriteBatch):
+        next_index = self._get_index() + 1
+        if next_index > MAX_UINT:
+            raise ValueError(next_index)
+        index_key = Partition.INDEX
+        self._store.put(index_key, next_index, write_batch=write_batch)
+
     def _increase_offset(self, receiver: str):
+        next_offset = self._get_offset(receiver) + 1
+        if next_offset > MAX_UINT:
+            raise ValueError(next_offset)
         offset_key = self._get_offset_key(receiver)
-        offset = self._get_offset(receiver)
-        offset += 1
-        self._store.put(offset_key, offset)
+        self._store.put(offset_key, next_offset)
 
     @staticmethod
-    def _get_index_key():
-        index_key = utils.get_padded_string('', prefix='_index:')
-        return index_key
-
-    @staticmethod
-    def _get_offset_key(receiver):
-        offset_key = utils.get_padded_string(receiver, prefix='_offset:')
+    def _get_offset_key(receiver: str) -> bytes:
+        offset_key = Partition.OFFSET + bytes(receiver, 'utf-8')
         return offset_key
 
     @staticmethod
-    def _get_message_key(index):
-        message_key = utils.get_padded_string(str(index), prefix='message:')
+    def _get_message_key(index: int) -> bytes:
+        message_key = Partition.MESSAGE + int_to_padded_bytes(index, UINT_BYTES)
         return message_key
