@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import utils
+from . import utils
 from os import makedirs
 from easyrocks import RocksDB, WriteBatch, CompressionType
 from easyrocks.utils import int_to_padded_bytes
