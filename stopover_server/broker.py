@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from stopover import version
-from partition import Partition, PartitionItem
+from .version import __version__
+from .partition import Partition, PartitionItem
+from . import utils
 from os import listdir, path
 from threading import Lock, Thread
 import traceback
 import random
 import falcon
-import utils
 import time
 import json
 import logging
@@ -48,7 +48,7 @@ class Broker:
     @staticmethod
     def on_get(request, response):
         response.content_type = 'text/html; charset=utf-8'
-        response.body = f'Labteral Stopover {version}'
+        response.body = f'Labteral Stopover {__version__}'
 
     def on_post(self, request, response):
         bin_data = request.stream.read()
