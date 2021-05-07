@@ -39,7 +39,7 @@ RUN \
     && rm -rf init_pkgs current_pkgs /root/.cache/pip \
     && find / -type d -name __pycache__ -exec rm -r {} \+
 
-ADD stopover.tar /opt/stopover
 WORKDIR /opt/stopover
-
-ENTRYPOINT python server.py
+COPY . .
+RUN python setup.py install
+ENTRYPOINT python -m stopover_server
