@@ -7,7 +7,7 @@ import stopover_server
 
 setup(name='stopover-server',
       version=stopover_server.__version__,
-      description='Message Broker powered by RocksDB',
+      description='A simple and robust message broker built on top of RocksDB',
       url='https://github.com/labteral/stopover',
       author='Rodrigo Martínez Castaño',
       author_email='dev@brunneis.com',
