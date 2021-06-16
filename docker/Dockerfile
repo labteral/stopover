@@ -1,4 +1,3 @@
-
 FROM python:3.9-slim-buster as BUILD_IMAGE
 
 ARG ROCKSDB_VERSION=6.10.2
