@@ -1,5 +1,6 @@
 ---
 global:
+  port: 5704
   data_dir: ./data
   receiver_timeout: 10
   rebalance_interval: 5

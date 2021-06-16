@@ -7,7 +7,7 @@ import falcon
 import logging
 import yaml
 import sys
-from cherrybone import Server
+import bjoern
 
 banner = f"""
   ███████████                             ███████████
@@ -57,11 +57,8 @@ def main():
     api = falcon.App()
     api.add_route('/', Broker(config))
 
-    threads = None
-    if 'threads' in config['global'] and config['global']['threads'] > 0:
-        threads = config['global']['threads']
-
-    Server(api, port=5704, threads=threads).start()
+    port = config['global']['port'] if 'port' in config['global'] else 5704
+    bjoern.run(api, '0.0.0.0', port)
 
 
 if __name__ == "__main__":
