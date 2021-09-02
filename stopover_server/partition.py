@@ -93,7 +93,8 @@ class Partition:
             # Fast-forward the offset if messages were pruned
             if partition_item is None:
                 current_index = self._get_index()
-                while partition_item is None and receiver_index < current_index:
+                while (partition_item is None
+                       and receiver_index < current_index):
                     self._increase_offset(receiver)
                     receiver_index = self._get_offset(receiver) + 1
                     partition_item = self._get_by_index(receiver_index)
@@ -109,9 +110,8 @@ class Partition:
         with self.lock:
             expected_offset = self._get_offset(receiver) + 1
             if offset != expected_offset:
-                raise ValueError(
-                    f'trying to commit offset {offset} but expecting {expected_offset}'
-                )
+                raise ValueError(f'trying to commit offset {offset} '
+                                 f'but expecting {expected_offset}')
             self._increase_offset(receiver)
 
     def set_offset(self, receiver: str, offset: int):
@@ -192,5 +192,6 @@ class Partition:
 
     @staticmethod
     def _get_message_key(index: int) -> bytes:
-        message_key = Partition.MESSAGE + int_to_padded_bytes(index, UINT_BYTES)
+        message_key = Partition.MESSAGE + int_to_padded_bytes(
+            index, UINT_BYTES)
         return message_key

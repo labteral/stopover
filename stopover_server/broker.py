@@ -146,7 +146,8 @@ class Broker:
             if receiver_group not in self.partitions_by_group[stream]:
                 self.partitions_by_group[stream][receiver_group] = {}
 
-            if receiver not in self.partitions_by_group[stream][receiver_group]:
+            if receiver not in self.partitions_by_group[stream][
+                    receiver_group]:
                 self.partitions_by_group[stream][receiver_group][receiver] = []
 
             receiver_partition_numbers = list(
@@ -256,7 +257,8 @@ class Broker:
             self.partitions_by_stream[stream] = partition_numbers
 
             try:
-                partitions_target = self.config['streams'][stream]['partitions']
+                partitions_target = self.config['streams'][stream][
+                    'partitions']
             except KeyError:
                 partitions_target = self.config['global']['partitions']
 
@@ -295,9 +297,8 @@ class Broker:
     def _rebalance(self):
         with self.partitions_by_group_lock:
             logging.debug('rebalancing...')
-            logging.info(
-                f'assignments: {json.dumps(self.partitions_by_group, indent=4)}'
-            )
+            logging.info('assignments: '
+                         f'{json.dumps(self.partitions_by_group, indent=4)}')
 
             receivers_to_remove = []
             for stream in self.partitions_by_group:
@@ -308,12 +309,12 @@ class Broker:
                     for receiver in self.partitions_by_group[stream][
                             receiver_group].keys():
                         receiver_unseen_time = (
-                            utils.get_timestamp_ms() -
-                            self.last_seen_by_group[receiver_group][receiver]
+                            utils.get_timestamp_ms()
+                            - self.last_seen_by_group[receiver_group][receiver]
                         ) / 1000
 
-                        if receiver_unseen_time \
-                        < self.config['global']['receiver_timeout']:
+                        if receiver_unseen_time < self.config['global'][
+                                'receiver_timeout']:
                             stream_receiver_group_receivers.append(receiver)
 
                         else:
@@ -352,9 +353,9 @@ class Broker:
                                     stream_partition_numbers[index])
 
             for stream, receiver_group, receiver in receivers_to_remove:
-                logging.info(f'receiver "{receiver}" kicked from the ' \
-                    f'receiver_group "{receiver_group}" ' \
-                    f'for the stream "{stream}"')
+                logging.info(f'receiver "{receiver}" kicked from the '
+                             f'receiver_group "{receiver_group}" '
+                             f'for the stream "{stream}"')
                 del self.partitions_by_group[stream][receiver_group][receiver]
                 if receiver in self.last_seen_by_group[receiver_group]:
                     del self.last_seen_by_group[receiver_group][receiver]
@@ -404,6 +405,6 @@ class Broker:
                         logging.info(
                             f'pruning stream {stream} ({partition_number})')
 
-                        partition = self._get_partition(stream,
-                                                        partition_number)
+                        partition = self._get_partition(
+                            stream, partition_number)
                         partition.prune(int(ttl))
