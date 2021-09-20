@@ -28,7 +28,7 @@ RUN \
     rm rocksdb.tar.gz && \
     rm -r rocksdb-$ROCKSDB_VERSION
 
-COPY . .
+COPY src .
 RUN \
     apt-get -y install libev-dev && \
     python setup.py install
