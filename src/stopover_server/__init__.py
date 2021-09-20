@@ -1,5 +1,4 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-__version__ = '2.216.0'
-
+from .version import __version__  # noqa F401

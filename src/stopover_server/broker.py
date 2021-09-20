@@ -14,13 +14,27 @@ import json
 import logging
 
 
-def log_errors(method):
+class STATUS:
+    OK = 20
+    ERROR = 50
+    END_OF_STREAM = 21
+    ALL_PARTITIONS_ASSIGNED = 22
+
+
+def handle_error(method):
     def _try_except(self, *args, **kwargs):
         try:
             return method(self, *args, **kwargs)
-        except Exception as e:
+        except Exception as error:
             traceback.print_exc()
-            raise e
+            params = args[0]
+            return utils.compress(
+                utils.pack({
+                    'stream': params['stream'],
+                    'receiver_group': params['receiver_group'],
+                    'error': str(error),
+                    'status': STATUS.ERROR,
+                }))
 
     return _try_except
 
@@ -71,16 +85,19 @@ class Broker:
                 self.knock(params)
 
             elif method == 'put_message':
-                response.media = self.put_message(params)
+                response.data = self.put_message(params)
 
             elif method == 'get_message':
                 response.data = self.get_message(params)
 
+            elif method == 'get_partitions':
+                response.data = self.get_partitions(params)
+
             elif method == 'commit_message':
-                response.media = self.commit_message(params)
+                response.data = self.commit_message(params)
 
             elif method == 'set_offset':
-                response.media = self.set_offset(params)
+                response.data = self.set_offset(params)
 
         except KeyError:
             response.status = falcon.status_codes.HTTP_400
@@ -88,7 +105,7 @@ class Broker:
         except Exception:
             response.status = falcon.status_codes.HTTP_500
 
-    @log_errors
+    @handle_error
     def put_message(self, params: dict) -> dict:
         key = None if 'key' not in params else params['key']
         value = params['value']
@@ -109,15 +126,16 @@ class Broker:
         partition = self._get_partition(stream, partition_number)
         index = partition.put(item)
 
-        return {
-            'stream': stream,
-            'partition': partition_number,
-            'index': index,
-            'timestamp': timestamp,
-            'status': 'ok'
-        }
+        return utils.compress(
+            utils.pack({
+                'stream': stream,
+                'partition': partition_number,
+                'index': index,
+                'timestamp': timestamp,
+                'status': STATUS.OK,
+            }))
 
-    @log_errors
+    @handle_error
     def knock(self, params: dict, do_log=True):
         receiver_group = params['receiver_group']
         receiver = params['receiver']
@@ -131,32 +149,36 @@ class Broker:
         if do_log:
             logging.info(f'{receiver_group}/{receiver} is knocking')
 
-    @log_errors
+        return utils.compress(
+            utils.pack({
+                'receiver_group': receiver_group,
+                'receiver': receiver,
+                'status': STATUS.OK,
+            }))
+
+    @handle_error
     def get_message(self, params: dict) -> dict:
         stream = params['stream']
         receiver_group = params['receiver_group']
         receiver = params['receiver']
+        index = params['index'] if 'index' in params else None
 
         self.knock(params, do_log=False)
 
-        with self.partitions_by_group_lock:
-            if stream not in self.partitions_by_group:
-                self.partitions_by_group[stream] = {}
-
-            if receiver_group not in self.partitions_by_group[stream]:
-                self.partitions_by_group[stream][receiver_group] = {}
-
-            if receiver not in self.partitions_by_group[stream][receiver_group]:
-                self.partitions_by_group[stream][receiver_group][receiver] = []
-
-            receiver_partition_numbers = list(
-                self.partitions_by_group[stream][receiver_group][receiver])
+        receiver_partition_numbers = self._get_receiver_partition_numbers(
+            stream,
+            receiver_group,
+            receiver,
+        )
 
         if len(receiver_partition_numbers) == 0:
             return utils.compress(
                 utils.pack({
                     'stream': stream,
-                    'status': 'all_partitions_assigned'
+                    'receiver_group': receiver_group,
+                    'receiver': receiver,
+                    'assigned_partitions': receiver_partition_numbers,
+                    'status': STATUS.ALL_PARTITIONS_ASSIGNED,
                 }))
 
         done = False
@@ -170,7 +192,7 @@ class Broker:
             partition_number = receiver_partition_numbers.pop(partition_index)
 
             partition = self._get_partition(stream, partition_number)
-            item = partition.get(receiver_group)
+            item = partition.get(receiver_group, index)
 
             if item is None:
                 continue
@@ -178,44 +200,65 @@ class Broker:
             return utils.compress(
                 utils.pack({
                     'stream': stream,
+                    'receiver_group': receiver_group,
+                    'receiver': receiver,
                     'partition': partition_number,
                     'index': item['index'],
                     'value': item['value'],
                     'timestamp': item['timestamp'],
-                    'status': 'ok'
+                    'assigned_partitions': receiver_partition_numbers,
+                    'status': STATUS.OK
                 }))
 
-        bin_data = utils.pack({'stream': stream, 'status': 'end_of_stream'})
-        return utils.compress(bin_data)
+        return utils.compress(
+            utils.pack({
+                'stream': stream,
+                'receiver_group': receiver_group,
+                'receiver': receiver,
+                'assigned_partitions': receiver_partition_numbers,
+                'status': STATUS.END_OF_STREAM,
+            }))
 
-    @log_errors
+    @handle_error
+    def get_partitions(self, params: dict) -> dict:
+        stream = params['stream']
+        receiver_group = params['receiver_group']
+        receiver = params['receiver']
+
+        self.knock(params, do_log=False)
+
+        receiver_partition_numbers = self._get_receiver_partition_numbers(
+            stream,
+            receiver_group,
+            receiver,
+        )
+
+        return utils.compress(
+            utils.pack({
+                'stream': stream,
+                'receiver_group': receiver_group,
+                'receiver': receiver,
+                'assigned_partitions': receiver_partition_numbers,
+            }))
+
+    @handle_error
     def commit_message(self, params: dict) -> dict:
         stream = params['stream']
         partition_number = params['partition']
         index = params['index']
         receiver_group = params['receiver_group']
 
-        try:
-            partition = self._get_partition(stream, partition_number)
-            partition.commit(index, receiver_group)
+        partition = self._get_partition(stream, partition_number)
+        partition.commit(index, receiver_group)
 
-            return {
+        return utils.compress(
+            utils.pack({
                 'stream': stream,
-                'partition': partition_number,
-                'index': index,
-                'status': 'ok'
-            }
+                'receiver_group': receiver_group,
+                'status': STATUS.OK,
+            }))
 
-        except ValueError as error:
-            return {
-                'stream': stream,
-                'partition': partition_number,
-                'index': index,
-                'status': 'error',
-                'message': str(error)
-            }
-
-    @log_errors
+    @handle_error
     def set_offset(self, params: dict) -> dict:
         stream = params['stream']
         partition_number = params['partition']
@@ -225,12 +268,14 @@ class Broker:
         partition = self._get_partition(stream, partition_number)
         partition.set_offset(receiver_group, index)
 
-        return {
-            'stream': stream,
-            'partition': partition_number,
-            'index': index,
-            'status': 'ok'
-        }
+        return utils.compress(
+            utils.pack({
+                'stream': stream,
+                'partition': partition_number,
+                'index': index,
+                'receiver_group': receiver_group,
+                'status': STATUS.OK,
+            }))
 
     def _get_partition(self, stream: str, partition_number: int):
         with self.partitions_lock:
@@ -244,6 +289,26 @@ class Broker:
                     data_dir=self.config['global']['data_dir'])
         return self.partitions[stream][partition_number]
 
+    def _get_receiver_partition_numbers(
+        self,
+        stream,
+        receiver_group,
+        receiver,
+    ):
+        with self.partitions_by_group_lock:
+            if stream not in self.partitions_by_group:
+                self.partitions_by_group[stream] = {}
+
+            if receiver_group not in self.partitions_by_group[stream]:
+                self.partitions_by_group[stream][receiver_group] = {}
+
+            if receiver not in self.partitions_by_group[stream][
+                    receiver_group]:
+                self.partitions_by_group[stream][receiver_group][receiver] = []
+
+            return list(
+                self.partitions_by_group[stream][receiver_group][receiver])
+
     def _get_stream_path(self, stream: str) -> str:
         return f"{self.config['global']['data_dir']}/streams/{stream}/"
 
@@ -256,7 +321,8 @@ class Broker:
             self.partitions_by_stream[stream] = partition_numbers
 
             try:
-                partitions_target = self.config['streams'][stream]['partitions']
+                partitions_target = self.config['streams'][stream][
+                    'partitions']
             except KeyError:
                 partitions_target = self.config['global']['partitions']
 
@@ -295,9 +361,10 @@ class Broker:
     def _rebalance(self):
         with self.partitions_by_group_lock:
             logging.debug('rebalancing...')
-            logging.info(
-                f'assignments: {json.dumps(self.partitions_by_group, indent=4)}'
-            )
+            if self.partitions_by_group:
+                logging.info(
+                    'assignments: '
+                    f'{json.dumps(self.partitions_by_group, indent=4)}')
 
             receivers_to_remove = []
             for stream in self.partitions_by_group:
@@ -308,12 +375,12 @@ class Broker:
                     for receiver in self.partitions_by_group[stream][
                             receiver_group].keys():
                         receiver_unseen_time = (
-                            utils.get_timestamp_ms() -
-                            self.last_seen_by_group[receiver_group][receiver]
+                            utils.get_timestamp_ms()
+                            - self.last_seen_by_group[receiver_group][receiver]
                         ) / 1000
 
-                        if receiver_unseen_time \
-                        < self.config['global']['receiver_timeout']:
+                        if receiver_unseen_time < self.config['global'][
+                                'receiver_timeout']:
                             stream_receiver_group_receivers.append(receiver)
 
                         else:
@@ -352,9 +419,9 @@ class Broker:
                                     stream_partition_numbers[index])
 
             for stream, receiver_group, receiver in receivers_to_remove:
-                logging.info(f'receiver "{receiver}" kicked from the ' \
-                    f'receiver_group "{receiver_group}" ' \
-                    f'for the stream "{stream}"')
+                logging.info(f'receiver "{receiver}" kicked from the '
+                             f'receiver_group "{receiver_group}" '
+                             f'for the stream "{stream}"')
                 del self.partitions_by_group[stream][receiver_group][receiver]
                 if receiver in self.last_seen_by_group[receiver_group]:
                     del self.last_seen_by_group[receiver_group][receiver]
@@ -404,6 +471,6 @@ class Broker:
                         logging.info(
                             f'pruning stream {stream} ({partition_number})')
 
-                        partition = self._get_partition(stream,
-                                                        partition_number)
+                        partition = self._get_partition(
+                            stream, partition_number)
                         partition.prune(int(ttl))

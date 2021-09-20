@@ -85,21 +85,25 @@ class Partition:
 
             return index
 
-    def get(self, receiver: str) -> dict:
+    def get(self, receiver_group: str, index=None) -> dict:
         with self.lock:
-            receiver_index = self._get_offset(receiver) + 1
+            if index is not None:
+                receiver_index = index
+            else:
+                receiver_index = self._get_offset(receiver_group) + 1
             partition_item = self._get_by_index(receiver_index)
 
             # Fast-forward the offset if messages were pruned
-            if partition_item is None:
+            if index is None and partition_item is None:
                 current_index = self._get_index()
-                while partition_item is None and receiver_index < current_index:
-                    self._increase_offset(receiver)
-                    receiver_index = self._get_offset(receiver) + 1
+                while (partition_item is None
+                       and receiver_index < current_index):
+                    self._increase_offset(receiver_group)
+                    receiver_index = self._get_offset(receiver_group) + 1
                     partition_item = self._get_by_index(receiver_index)
 
             if partition_item is None:
-                return None
+                return
 
             partition_item_dict = partition_item.dict
             partition_item_dict['index'] = receiver_index
@@ -109,9 +113,8 @@ class Partition:
         with self.lock:
             expected_offset = self._get_offset(receiver) + 1
             if offset != expected_offset:
-                raise ValueError(
-                    f'trying to commit offset {offset} but expecting {expected_offset}'
-                )
+                raise ValueError(f'trying to commit offset {offset} '
+                                 f'but expecting {expected_offset}')
             self._increase_offset(receiver)
 
     def set_offset(self, receiver: str, offset: int):
@@ -192,5 +195,6 @@ class Partition:
 
     @staticmethod
     def _get_message_key(index: int) -> bytes:
-        message_key = Partition.MESSAGE + int_to_padded_bytes(index, UINT_BYTES)
+        message_key = Partition.MESSAGE + int_to_padded_bytes(
+            index, UINT_BYTES)
         return message_key
