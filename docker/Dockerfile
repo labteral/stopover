@@ -40,4 +40,4 @@ COPY --from=BUILD_IMAGE /usr/include /usr/include
 COPY --from=BUILD_IMAGE /usr/local/include /usr/local/include
 ENV LD_LIBRARY_PATH=/usr/local/lib
 WORKDIR /opt/stopover
-ENTRYPOINT python -m stopover_server
+ENTRYPOINT python -u -m stopover_server
