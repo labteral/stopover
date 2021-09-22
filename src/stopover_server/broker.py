@@ -82,7 +82,7 @@ class Broker:
 
         try:
             if method == 'knock':
-                self.knock(params)
+                response.data = self.knock(params)
 
             elif method == 'put_message':
                 response.data = self.put_message(params)
