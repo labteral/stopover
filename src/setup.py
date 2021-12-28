@@ -26,7 +26,7 @@ setup(name='stopover-server',
       ],
       python_requires='>=3.6',
       install_requires=[
-          'msgpack ~= 1.0.2',
+          'msgpack ~= 1.0.3',
           'python-snappy >= 0.6.0, < 1.0.0',
           'easyrocks >= 2.214.0, < 3.0.0',
           'pyyaml >= 5.4.1, < 6.0.0',

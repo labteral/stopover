@@ -54,7 +54,7 @@ def main():
         logging.critical('the streams dir is not active')
         sys.exit(1)
 
-    api = falcon.App()
+    api = falcon.App(cors_enable=True)
     api.add_route('/', Broker(config))
 
     port = config['global']['port'] if 'port' in config['global'] else 5704
