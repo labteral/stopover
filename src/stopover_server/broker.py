@@ -28,13 +28,12 @@ def handle_error(method):
         except Exception as error:
             traceback.print_exc()
             params = args[0]
-            return utils.compress(
-                utils.pack({
-                    'stream': params['stream'],
-                    'receiver_group': params['receiver_group'],
-                    'error': str(error),
-                    'status': STATUS.ERROR,
-                }))
+            return {
+                'stream': params['stream'],
+                'receiver_group': params['receiver_group'],
+                'error': str(error),
+                'status': STATUS.ERROR,
+            }
 
     return _try_except
 
@@ -67,8 +66,10 @@ class Broker:
     def on_post(self, request, response):
         bin_data = request.stream.read()
 
+        plain_response = False
         if bin_data[:1] == b'{':
             # JSON
+            plain_response = True
             data = json.loads(bin_data)
         else:
             # MessagePack
@@ -82,28 +83,39 @@ class Broker:
 
         try:
             if method == 'knock':
-                response.data = self.knock(params)
+                response_data = self.knock(params)
 
             elif method == 'put_message':
-                response.data = self.put_message(params)
+                response_data = self.put_message(params)
 
             elif method == 'get_message':
-                response.data = self.get_message(params)
+                response_data = self.get_message(params)
 
             elif method == 'get_partitions':
-                response.data = self.get_partitions(params)
+                response_data = self.get_partitions(params)
 
             elif method == 'commit_message':
-                response.data = self.commit_message(params)
+                response_data = self.commit_message(params)
 
             elif method == 'set_offset':
-                response.data = self.set_offset(params)
+                response_data = self.set_offset(params)
+
+            else:
+                response.status = falcon.status_codes.HTTP_400
+                return
+
+            if not plain_response:
+                response.data = utils.compress(utils.pack(response_data))
+            else:
+                response.data = json.dumps(response_data).encode('utf-8')
 
         except KeyError:
             response.status = falcon.status_codes.HTTP_400
+            return
 
         except Exception:
             response.status = falcon.status_codes.HTTP_500
+            return
 
     @handle_error
     def put_message(self, params: dict) -> dict:
@@ -126,14 +138,13 @@ class Broker:
         partition = self._get_partition(stream, partition_number)
         index = partition.put(item)
 
-        return utils.compress(
-            utils.pack({
-                'stream': stream,
-                'partition': partition_number,
-                'index': index,
-                'timestamp': timestamp,
-                'status': STATUS.OK,
-            }))
+        return {
+            'stream': stream,
+            'partition': partition_number,
+            'index': index,
+            'timestamp': timestamp,
+            'status': STATUS.OK,
+        }
 
     @handle_error
     def knock(self, params: dict, do_log=True):
@@ -149,12 +160,11 @@ class Broker:
         if do_log:
             logging.info(f'{receiver_group}/{receiver} is knocking')
 
-        return utils.compress(
-            utils.pack({
-                'receiver_group': receiver_group,
-                'receiver': receiver,
-                'status': STATUS.OK,
-            }))
+        return {
+            'receiver_group': receiver_group,
+            'receiver': receiver,
+            'status': STATUS.OK,
+        }
 
     @handle_error
     def get_message(self, params: dict) -> dict:
@@ -172,14 +182,13 @@ class Broker:
         )
 
         if len(receiver_partition_numbers) == 0:
-            return utils.compress(
-                utils.pack({
-                    'stream': stream,
-                    'receiver_group': receiver_group,
-                    'receiver': receiver,
-                    'assigned_partitions': receiver_partition_numbers,
-                    'status': STATUS.ALL_PARTITIONS_ASSIGNED,
-                }))
+            return {
+                'stream': stream,
+                'receiver_group': receiver_group,
+                'receiver': receiver,
+                'assigned_partitions': receiver_partition_numbers,
+                'status': STATUS.ALL_PARTITIONS_ASSIGNED,
+            }
 
         done = False
         while not done:
@@ -197,27 +206,25 @@ class Broker:
             if item is None:
                 continue
 
-            return utils.compress(
-                utils.pack({
-                    'stream': stream,
-                    'receiver_group': receiver_group,
-                    'receiver': receiver,
-                    'partition': partition_number,
-                    'index': item['index'],
-                    'value': item['value'],
-                    'timestamp': item['timestamp'],
-                    'assigned_partitions': receiver_partition_numbers,
-                    'status': STATUS.OK
-                }))
-
-        return utils.compress(
-            utils.pack({
+            return {
                 'stream': stream,
                 'receiver_group': receiver_group,
                 'receiver': receiver,
+                'partition': partition_number,
+                'index': item['index'],
+                'value': item['value'],
+                'timestamp': item['timestamp'],
                 'assigned_partitions': receiver_partition_numbers,
-                'status': STATUS.END_OF_STREAM,
-            }))
+                'status': STATUS.OK
+            }
+
+        return {
+            'stream': stream,
+            'receiver_group': receiver_group,
+            'receiver': receiver,
+            'assigned_partitions': receiver_partition_numbers,
+            'status': STATUS.END_OF_STREAM,
+        }
 
     @handle_error
     def get_partitions(self, params: dict) -> dict:
@@ -233,13 +240,12 @@ class Broker:
             receiver,
         )
 
-        return utils.compress(
-            utils.pack({
-                'stream': stream,
-                'receiver_group': receiver_group,
-                'receiver': receiver,
-                'assigned_partitions': receiver_partition_numbers,
-            }))
+        return {
+            'stream': stream,
+            'receiver_group': receiver_group,
+            'receiver': receiver,
+            'assigned_partitions': receiver_partition_numbers,
+        }
 
     @handle_error
     def commit_message(self, params: dict) -> dict:
@@ -251,12 +257,11 @@ class Broker:
         partition = self._get_partition(stream, partition_number)
         partition.commit(index, receiver_group)
 
-        return utils.compress(
-            utils.pack({
-                'stream': stream,
-                'receiver_group': receiver_group,
-                'status': STATUS.OK,
-            }))
+        return {
+            'stream': stream,
+            'receiver_group': receiver_group,
+            'status': STATUS.OK,
+        }
 
     @handle_error
     def set_offset(self, params: dict) -> dict:
@@ -268,14 +273,13 @@ class Broker:
         partition = self._get_partition(stream, partition_number)
         partition.set_offset(receiver_group, index)
 
-        return utils.compress(
-            utils.pack({
-                'stream': stream,
-                'partition': partition_number,
-                'index': index,
-                'receiver_group': receiver_group,
-                'status': STATUS.OK,
-            }))
+        return {
+            'stream': stream,
+            'partition': partition_number,
+            'index': index,
+            'receiver_group': receiver_group,
+            'status': STATUS.OK,
+        }
 
     def _get_partition(self, stream: str, partition_number: int):
         with self.partitions_lock:

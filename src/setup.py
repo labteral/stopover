@@ -26,12 +26,12 @@ setup(name='stopover-server',
       ],
       python_requires='>=3.6',
       install_requires=[
-          'msgpack ~= 1.0.2',
-          'python-snappy >= 0.6.0, < 1.0.0',
-          'easyrocks >= 2.214.0, < 3.0.0',
+          'msgpack >= 1.0.2, < 2.0.0',
+          'python-snappy >= 0.5.4, < 1.0.0',
+          'easyrocks >= 2.214.0.1, < 3.0.0',
           'pyyaml >= 5.4.1, < 6.0.0',
           'falcon >= 3.0.0, < 4.0.0',
-          'bjoern ~= 3.1.0',
+          'bjoern >= 3.1.0, < 4.0.0',
       ],
       entry_points={
           'console_scripts': [
