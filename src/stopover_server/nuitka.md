@@ -1,4 +1,4 @@
-Add the following explicit imports
+Add the following explicit imports:
 ```python
 import rocksdb.interfaces
 import rocksdb.errors
