@@ -44,7 +44,7 @@ class Broker:
 
     def __init__(self, config):
         self.config = config
-        utils.log_dict(self.config, prefix='⚙️ ')
+        utils.log_dict(self.config, prefix='⚙️  ')
 
         self.partitions_by_stream_lock = Lock()
         self.partitions_by_stream = {}
@@ -78,7 +78,7 @@ class Broker:
     @staticmethod
     def on_get(request, response):
         response.content_type = 'text/html; charset=utf-8'
-        response.body = f'Labteral Stopover {__version__}'
+        response.text = f'Labteral Stopover {__version__}'
 
     def on_post(self, request, response):
         headers = {
@@ -513,7 +513,7 @@ class Broker:
 
                     for partition_number in partition_numbers:
                         logging.info(
-                            f'pruning stream {stream} ({partition_number})'
+                            f'pruning stream {stream} (partition {partition_number})'
                         )
 
                         partition = self._get_partition(
