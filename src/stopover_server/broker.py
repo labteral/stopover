@@ -513,7 +513,7 @@ class Broker:
 
                     for partition_number in partition_numbers:
                         logging.info(
-                            f'pruning stream {stream} ({partition_number})'
+                            f'pruning stream {stream} (partition {partition_number})'
                         )
 
                         partition = self._get_partition(
