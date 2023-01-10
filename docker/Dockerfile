@@ -1,4 +1,4 @@
-FROM python:3.9-slim-buster as BUILD_IMAGE
+FROM python:3.11-slim-buster as BUILD_IMAGE
 
 ARG ROCKSDB_VERSION=6.10.2
 ARG ROCKSDB_BASE_URL=https://github.com/facebook/rocksdb/archive
@@ -33,7 +33,7 @@ RUN \
     apt-get -y install libev-dev && \
     python setup.py install
 
-FROM python:3.9-slim-buster
+FROM python:3.11-slim-buster
 COPY --from=BUILD_IMAGE /usr/lib /usr/lib
 COPY --from=BUILD_IMAGE /usr/local/lib /usr/local/lib
 COPY --from=BUILD_IMAGE /usr/include /usr/include

@@ -12,6 +12,7 @@ import falcon
 import time
 import json
 import logging
+import base64
 
 
 class STATUS:
@@ -22,6 +23,7 @@ class STATUS:
 
 
 def handle_error(method):
+
     def _try_except(self, *args, **kwargs):
         try:
             return method(self, *args, **kwargs)
@@ -39,9 +41,10 @@ def handle_error(method):
 
 
 class Broker:
+
     def __init__(self, config):
         self.config = config
-        logging.info(f'config: {json.dumps(config, indent=2)}')
+        utils.log_dict(self.config, prefix='⚙️ ')
 
         self.partitions_by_stream_lock = Lock()
         self.partitions_by_stream = {}
@@ -58,12 +61,44 @@ class Broker:
         Thread(target=self._rebalance_loop, daemon=True).start()
         Thread(target=self._prune_loop, daemon=True).start()
 
+    def check_authenticated(self, headers):
+        if 'authorization' in headers:
+            return True
+        return False
+
+    def check_authorized(self, headers):
+        token = headers['authorization'].split('Basic ')[1]
+        client_id, client_secret = base64.b64decode(token) \
+            .decode('ascii').split(':')
+        return (
+            client_id in self.config['auth']
+            and client_secret == self.config['auth'][client_id]
+        )
+
     @staticmethod
     def on_get(request, response):
         response.content_type = 'text/html; charset=utf-8'
         response.body = f'Labteral Stopover {__version__}'
 
     def on_post(self, request, response):
+        headers = {
+            key.lower(): value
+            for (key, value) in request.headers.items()
+        }
+
+        if 'auth' in self.config:
+            is_authenticated = self.check_authenticated(headers)
+            if not is_authenticated:
+                response.status = falcon.status_codes.HTTP_401
+                return
+
+            is_authorized = self.check_authorized(
+                headers
+            ) if is_authenticated else False
+            if not is_authorized:
+                response.status = falcon.status_codes.HTTP_403
+                return
+
         bin_data = request.stream.read()
 
         plain_response = False
@@ -290,7 +325,8 @@ class Broker:
                 self.partitions[stream][partition_number] = Partition(
                     stream=stream,
                     number=partition_number,
-                    data_dir=self.config['global']['data_dir'])
+                    data_dir=self.config['global']['data_dir']
+                )
         return self.partitions[stream][partition_number]
 
     def _get_receiver_partition_numbers(
@@ -306,12 +342,13 @@ class Broker:
             if receiver_group not in self.partitions_by_group[stream]:
                 self.partitions_by_group[stream][receiver_group] = {}
 
-            if receiver not in self.partitions_by_group[stream][
-                    receiver_group]:
+            if receiver not in self.partitions_by_group[stream][receiver_group
+                                                                ]:
                 self.partitions_by_group[stream][receiver_group][receiver] = []
 
             return list(
-                self.partitions_by_group[stream][receiver_group][receiver])
+                self.partitions_by_group[stream][receiver_group][receiver]
+            )
 
     def _get_stream_path(self, stream: str) -> str:
         return f"{self.config['global']['data_dir']}/streams/{stream}/"
@@ -325,8 +362,8 @@ class Broker:
             self.partitions_by_stream[stream] = partition_numbers
 
             try:
-                partitions_target = self.config['streams'][stream][
-                    'partitions']
+                partitions_target = self.config['streams'][stream]['partitions'
+                                                                   ]
             except KeyError:
                 partitions_target = self.config['global']['partitions']
 
@@ -344,12 +381,15 @@ class Broker:
                                               partitions_target):
                     if partition_number in partition_numbers:
                         raise FileNotFoundError(
-                            f'missing partitions among {partition_numbers}')
+                            f'missing partitions among {partition_numbers}'
+                        )
 
-                    Partition(stream=stream,
-                              number=partition_number,
-                              data_dir=self.config['global']['data_dir'],
-                              create_if_missing=True)
+                    Partition(
+                        stream=stream,
+                        number=partition_number,
+                        data_dir=self.config['global']['data_dir'],
+                        create_if_missing=True
+                    )
                     partition_numbers.append(partition_number)
 
             return self.partitions_by_stream[stream]
@@ -359,16 +399,15 @@ class Broker:
             self._rebalance()
             remaining_seconds = self.config['global']['rebalance_interval']
             logging.debug(
-                f"next rebalance will hapen in {remaining_seconds} seconds")
+                f"next rebalance will hapen in {remaining_seconds} seconds"
+            )
             time.sleep(self.config['global']['rebalance_interval'])
 
     def _rebalance(self):
         with self.partitions_by_group_lock:
             logging.debug('rebalancing...')
             if self.partitions_by_group:
-                logging.info(
-                    'assignments: '
-                    f'{json.dumps(self.partitions_by_group, indent=4)}')
+                utils.log_dict(self.partitions_by_group)
 
             receivers_to_remove = []
             for stream in self.partitions_by_group:
@@ -389,7 +428,8 @@ class Broker:
 
                         else:
                             receivers_to_remove.append(
-                                (stream, receiver_group, receiver))
+                                (stream, receiver_group, receiver)
+                            )
 
                     stream_partition_numbers = \
                         self._get_stream_partition_numbers(stream)
@@ -410,22 +450,22 @@ class Broker:
                                        step):
                         receiver_index = index // step
                         self.partitions_by_group[stream][receiver_group][
-                            stream_receiver_group_receivers[
-                                receiver_index]] = stream_partition_numbers[
-                                    index:index + step]
+                            stream_receiver_group_receivers[receiver_index]
+                        ] = stream_partition_numbers[index:index + step]
 
                     for index in range(number_of_partitions - remainder,
                                        number_of_partitions):
                         receiver_index = index - number_of_partitions + 1
                         self.partitions_by_group[stream][receiver_group][
-                            stream_receiver_group_receivers[
-                                receiver_index]].append(
-                                    stream_partition_numbers[index])
+                            stream_receiver_group_receivers[receiver_index]
+                        ].append(stream_partition_numbers[index])
 
             for stream, receiver_group, receiver in receivers_to_remove:
-                logging.info(f'receiver "{receiver}" kicked from the '
-                             f'receiver_group "{receiver_group}" '
-                             f'for the stream "{stream}"')
+                logging.info(
+                    f'receiver "{receiver}" kicked from the '
+                    f'receiver_group "{receiver_group}" '
+                    f'for the stream "{stream}"'
+                )
                 del self.partitions_by_group[stream][receiver_group][receiver]
                 if receiver in self.last_seen_by_group[receiver_group]:
                     del self.last_seen_by_group[receiver_group][receiver]
@@ -473,8 +513,10 @@ class Broker:
 
                     for partition_number in partition_numbers:
                         logging.info(
-                            f'pruning stream {stream} ({partition_number})')
+                            f'pruning stream {stream} ({partition_number})'
+                        )
 
                         partition = self._get_partition(
-                            stream, partition_number)
+                            stream, partition_number
+                        )
                         partition.prune(int(ttl))

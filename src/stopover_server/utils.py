@@ -6,6 +6,7 @@ import snappy
 import time
 import random
 import hashlib
+import logging
 
 
 def pack(message: dict) -> bytes:
@@ -55,3 +56,27 @@ def get_partition_number(partition_numbers, key=None):
         partition = partition_numbers[partition_index]
 
     return partition
+
+
+def log_dict(
+    config,
+    prefix=None,
+    key_prefix=None,
+):
+    if prefix is None:
+        prefix = ''
+
+    if key_prefix is None:
+        key_prefix = ''
+
+    for key, value in config.items():
+        if isinstance(value, dict):
+            if key == 'auth':
+                value = dict(map(lambda k: (k, '<hidden>'), value.keys()))
+            log_dict(
+                config=value,
+                prefix=prefix,
+                key_prefix=f'{key_prefix}{key}.',
+            )
+        else:
+            logging.info(f'{prefix}{key_prefix}{key}={value}')
