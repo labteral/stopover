@@ -78,7 +78,7 @@ class Broker:
     @staticmethod
     def on_get(request, response):
         response.content_type = 'text/html; charset=utf-8'
-        response.body = f'Labteral Stopover {__version__}'
+        response.text = f'Labteral Stopover {__version__}'
 
     def on_post(self, request, response):
         headers = {
