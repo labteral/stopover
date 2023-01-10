@@ -1,4 +1,7 @@
 ---
+auth:
+  guest: guest
+
 global:
   port: 5704
   data_dir: ./data

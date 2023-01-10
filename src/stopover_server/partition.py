@@ -13,10 +13,13 @@ MAX_UINT = 2**(UINT_BYTES * 8) - 1
 
 
 class PartitionItem:
-    def __init__(self,
-                 value: bytes = None,
-                 timestamp: int = None,
-                 item_dict: Dict = None):
+
+    def __init__(
+        self,
+        value: bytes = None,
+        timestamp: int = None,
+        item_dict: Dict = None
+    ):
         if item_dict is not None:
             self._load_from_dict(item_dict)
         else:
@@ -47,11 +50,13 @@ class Partition:
     INDEX = b'\x01'
     OFFSET = b'\x02'
 
-    def __init__(self,
-                 stream: str,
-                 number: int,
-                 data_dir: str,
-                 create_if_missing: bool = False):
+    def __init__(
+        self,
+        stream: str,
+        number: int,
+        data_dir: str,
+        create_if_missing: bool = False
+    ):
         self.lock = Lock()
         self.stream = stream
         self.number = number
@@ -103,7 +108,7 @@ class Partition:
                     partition_item = self._get_by_index(receiver_index)
 
             if partition_item is None:
-                return
+                return None
 
             partition_item_dict = partition_item.dict
             partition_item_dict['index'] = receiver_index
@@ -113,8 +118,10 @@ class Partition:
         with self.lock:
             expected_offset = self._get_offset(receiver) + 1
             if offset != expected_offset:
-                raise ValueError(f'trying to commit offset {offset} '
-                                 f'but expecting {expected_offset}')
+                raise ValueError(
+                    f'trying to commit offset {offset} '
+                    f'but expecting {expected_offset}'
+                )
             self._increase_offset(receiver)
 
     def set_offset(self, receiver: str, offset: int):
@@ -147,7 +154,7 @@ class Partition:
                 logging.debug(f'Deleting {key}')
                 self._store.delete(key)
 
-    def _get_by_index(self, index: int) -> bytes:
+    def _get_by_index(self, index: int) -> PartitionItem:
         message_key = self._get_message_key(index)
         value = self._store.get(message_key)
         if value is None:
@@ -196,5 +203,6 @@ class Partition:
     @staticmethod
     def _get_message_key(index: int) -> bytes:
         message_key = Partition.MESSAGE + int_to_padded_bytes(
-            index, UINT_BYTES)
+            index, UINT_BYTES
+        )
         return message_key
