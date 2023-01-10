@@ -44,7 +44,7 @@ class Broker:
 
     def __init__(self, config):
         self.config = config
-        utils.log_dict(self.config, prefix='⚙️ ')
+        utils.log_dict(self.config, prefix='⚙️  ')
 
         self.partitions_by_stream_lock = Lock()
         self.partitions_by_stream = {}
