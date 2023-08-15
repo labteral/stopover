@@ -1,6 +1,7 @@
 FROM python:3.11-slim-buster as BUILD_IMAGE
 
-ARG ROCKSDB_VERSION=6.10.2
+# 6.29.3 is the last version that works with python-rocksdb
+ARG ROCKSDB_VERSION=6.29.3
 ARG ROCKSDB_BASE_URL=https://github.com/facebook/rocksdb/archive
 
 RUN \
