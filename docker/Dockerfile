@@ -23,8 +23,9 @@ RUN \
 RUN \
     cd /opt && \
     curl -L $ROCKSDB_BASE_URL/v$ROCKSDB_VERSION.tar.gz -o rocksdb.tar.gz -s && \
-    tar xf rocksdb.tar.gz && \
-    cd rocksdb-$ROCKSDB_VERSION && \
+    mkdir rocksdb && \
+    tar xf rocksdb.tar.gz -C rocksdb --strip 1 && \
+    cd rocksdb && \
     make shared_lib install-shared && \
     make ldb
 
@@ -32,7 +33,8 @@ COPY src .
 RUN \
     apt-get -y install \
     libev-dev && \
-    python setup.py install
+    pip install 'cython >= 0.29.36, <3.0.0' && \
+    pip install .
 
 FROM python:3.11-slim-buster
 COPY --from=BUILD_IMAGE /usr/lib /usr/lib
