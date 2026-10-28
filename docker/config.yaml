@@ -4,6 +4,12 @@ auth:
 
 global:
   port: 5704
+  threads: 4
+  max_pending_requests: 256
+  max_pending_bytes: 536870912
+  max_stream_pending_requests: 64
+  max_stream_pending_bytes: 268435456
+  max_request_bytes: 134217728
   data_dir: ./data
   receiver_timeout: 10
   rebalance_interval: 5

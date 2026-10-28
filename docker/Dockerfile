@@ -1,48 +1,14 @@
-FROM python:3.11-slim-buster as BUILD_IMAGE
-
-ARG ROCKSDB_VERSION=6.29.5 # Last version that works with python-rocksdb
-ARG ROCKSDB_BASE_URL=https://github.com/facebook/rocksdb/archive
-ARG DEBUG_LEVEL=0
-ARG PORTABLE=1
-
-RUN \
-    apt-get update && \
-    apt-get -y install \
-    curl \
-    make \
-    gcc \
-    g++ \
-    libgflags-dev \
-    libsnappy-dev \
-    zlib1g-dev \
-    libbz2-dev \
-    liblz4-dev \
-    libzstd-dev \
-    libssl-dev
-
-RUN \
-    cd /opt && \
-    curl -L $ROCKSDB_BASE_URL/v$ROCKSDB_VERSION.tar.gz -o rocksdb.tar.gz -s && \
-    mkdir rocksdb && \
-    tar xf rocksdb.tar.gz -C rocksdb --strip 1 && \
-    cd rocksdb && \
-    make shared_lib install-shared && \
-    make ldb
-
-COPY src .
-RUN \
-    apt-get -y install \
-    libev-dev && \
-    pip install 'cython >= 0.29.36, <3.0.0' && \
-    pip install .
-
-FROM python:3.11-slim-buster
-COPY --from=BUILD_IMAGE /usr/lib /usr/lib
-COPY --from=BUILD_IMAGE /usr/local/lib /usr/local/lib
-COPY --from=BUILD_IMAGE /usr/include /usr/include
-COPY --from=BUILD_IMAGE /usr/local/include /usr/local/include
-COPY --from=BUILD_IMAGE /opt/rocksdb/ldb /usr/local/bin/ldb
-ENV LD_LIBRARY_PATH=/usr/local/lib
-
+FROM python:3.14.8-alpine3.24@sha256:8acac70227ce3b34da9453120c375cc5b66cd0b062d4dc6bc74286f81a3819e1
+ENV PYTHONDONTWRITEBYTECODE=1
+COPY src /src
+RUN apk add --no-cache crc32c 'zlib>=1.3.2-r1' \
+    && apk add --no-cache --virtual .build-deps build-base crc32c-dev \
+    && python -m pip install --no-cache-dir --no-compile /src \
+    && python -m pip check \
+    && python -c "import google_crc32c; assert google_crc32c.implementation == 'c'" \
+    && apk del .build-deps \
+    && rm -rf /src /usr/local/lib/python3.14/site-packages/pip \
+        /usr/local/lib/python3.14/site-packages/pip-*.dist-info \
+        /usr/local/bin/pip /usr/local/bin/pip3 /usr/local/bin/pip3.14
 WORKDIR /opt/stopover
-ENTRYPOINT python -u -m stopover_server
+ENTRYPOINT ["python", "-u", "-m", "stopover_server"]

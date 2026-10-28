@@ -3,11 +3,10 @@
 
 from .version import __version__
 from .broker import Broker
-import falcon
 import logging
 import yaml
 import sys
-import bjoern
+from .server import create_server
 
 banner = f"""
                                       █████████
@@ -52,11 +51,15 @@ def main():
         logging.critical('the streams dir is not active')
         sys.exit(1)
 
-    api = falcon.App(cors_enable=True)
-    api.add_route('/', Broker(config))
-
     port = config['global']['port'] if 'port' in config['global'] else 5704
-    bjoern.run(api, '0.0.0.0', port)
+    server = create_server(Broker(config), host='0.0.0.0', port=int(port),
+                           threads=config['global'].get('threads', 4))
+    try:
+        server.print_listen('Serving on http://{}:{}')
+        server.run()
+    finally:
+        server.task_dispatcher.shutdown()
+        server.close()
 
 
 if __name__ == "__main__":

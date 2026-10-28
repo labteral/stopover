@@ -9,7 +9,7 @@ import logging
 from typing import Dict
 
 UINT_BYTES = 8
-MAX_UINT = 2**(UINT_BYTES * 8) - 1
+MAX_UINT = 2 ** (UINT_BYTES * 8) - 1
 
 
 class PartitionItem:
@@ -18,13 +18,13 @@ class PartitionItem:
         self,
         value: bytes = None,
         timestamp: int = None,
-        item_dict: Dict = None
+        item_dict: Dict = None,
     ):
         if item_dict is not None:
             self._load_from_dict(item_dict)
         else:
             if timestamp is None:
-                raise ValueError('the timestamp was not provided')
+                raise ValueError("the timestamp was not provided")
             self._value = value
             self._timestamp = timestamp
 
@@ -38,29 +38,34 @@ class PartitionItem:
 
     @property
     def dict(self):
-        return {'value': self._value, 'timestamp': self._timestamp}
+        return {"value": self._value, "timestamp": self._timestamp}
 
     def _load_from_dict(self, value: Dict):
-        self._value = value['value']
-        self._timestamp = value['timestamp']
+        self._value = value["value"]
+        self._timestamp = value["timestamp"]
 
 
 class Partition:
-    MESSAGE = b'\x00'
-    INDEX = b'\x01'
-    OFFSET = b'\x02'
+    MESSAGE = b"\x00"
+    INDEX = b"\x01"
+    OFFSET = b"\x02"
 
     def __init__(
         self,
         stream: str,
         number: int,
         data_dir: str,
-        create_if_missing: bool = False
+        create_if_missing: bool = False,
     ):
         self.lock = Lock()
         self.stream = stream
         self.number = number
-        partition_path = f'{data_dir}/streams/{stream}/{self.number}'
+        utils.validate_partition(number)
+        stream_path = utils.stream_path(data_dir, stream)
+        partition_path = (stream_path / str(number)).resolve()
+        if not partition_path.is_relative_to(stream_path):
+            raise ValueError('Partition path escapes its stream directory')
+        partition_path = str(partition_path)
 
         try:
             makedirs(partition_path)
@@ -68,13 +73,13 @@ class Partition:
             pass
 
         opts = {
-            'create_if_missing': create_if_missing,
-            'compression': CompressionType.lz4_compression,
-            'use_fsync': True,
-            'paranoid_checks': True,
-            'compaction_options_universal': {
-                'compression_size_percent': 0,
-            }
+            "create_if_missing": create_if_missing,
+            "compression": CompressionType.lz4_compression,
+            "use_fsync": True,
+            "paranoid_checks": True,
+            "compaction_options_universal": {
+                "compression_size_percent": 0,
+            },
         }
         self._store = RocksDB(path=partition_path, opts=opts)
 
@@ -90,7 +95,7 @@ class Partition:
 
             return index
 
-    def get(self, receiver_group: str, index=None) -> dict:
+    def get(self, receiver_group: str, index=None, skip_pruned=False) -> dict:
         with self.lock:
             if index is not None:
                 receiver_index = index
@@ -99,36 +104,51 @@ class Partition:
             partition_item = self._get_by_index(receiver_index)
 
             # Fast-forward the offset if messages were pruned
-            if index is None and partition_item is None:
-                current_index = self._get_index()
-                while (partition_item is None
-                       and receiver_index < current_index):
-                    self._increase_offset(receiver_group)
-                    receiver_index = self._get_offset(receiver_group) + 1
-                    partition_item = self._get_by_index(receiver_index)
+            if partition_item is None and (index is None or skip_pruned):
+                first_index = self._first_available_index()
+                if receiver_index < first_index:
+                    receiver_index = first_index
+                    if index is None:
+                        self._increase_offset(receiver_group, first_index - 1)
+                    if receiver_index <= self._get_index():
+                        partition_item = self._get_by_index(receiver_index)
 
             if partition_item is None:
                 return None
 
             partition_item_dict = partition_item.dict
-            partition_item_dict['index'] = receiver_index
+            partition_item_dict["index"] = receiver_index
             return partition_item_dict
 
     def commit(self, offset: int, receiver: str):
         with self.lock:
-            expected_offset = self._get_offset(receiver) + 1
-            if offset != expected_offset:
+            if (
+                type(offset) is not int
+                or offset < 0
+                or offset > self._get_index()
+            ):
+                raise ValueError("invalid commit offset")
+            current_offset = self._get_offset(receiver)
+            if offset <= current_offset:
+                return
+            expected_offset = current_offset + 1
+            if (
+                offset != expected_offset
+                and offset > self._first_available_index()
+            ):
                 raise ValueError(
-                    f'trying to commit offset {offset} '
-                    f'but expecting {expected_offset}'
+                    f"trying to commit offset {offset} "
+                    f"but expecting {expected_offset}"
                 )
-            self._increase_offset(receiver)
+            self._increase_offset(receiver, offset)
 
     def set_offset(self, receiver: str, offset: int):
+        # The offset is the last consumed index: -1 means nothing consumed
+        # and the last produced index means everything consumed.
+        if type(offset) is not int or offset < -1:
+            raise ValueError("invalid offset")
         with self.lock:
-            index = self._get_index()
-            if offset >= index:
-                offset = index - 1
+            offset = min(offset, self._get_index())
             offset_key = self._get_offset_key(receiver)
             self._store.put(offset_key, offset)
 
@@ -151,7 +171,7 @@ class Partition:
                 keys_to_delete.append(key)
 
             for key in keys_to_delete:
-                logging.debug(f'Deleting {key}')
+                logging.debug(f"Deleting {key}")
                 self._store.delete(key)
 
     def _get_by_index(self, index: int) -> PartitionItem:
@@ -174,6 +194,14 @@ class Partition:
             index = -1
         return index
 
+    def _first_available_index(self):
+        iterator = self._store.db.iterkeys()
+        iterator.seek(self.MESSAGE)
+        key = next(iterator, None)
+        if key is not None and key.startswith(self.MESSAGE):
+            return int.from_bytes(key[1:], "big")
+        return self._get_index() + 1
+
     def _get_offset(self, receiver: str) -> int:
         offset_key = self._get_offset_key(receiver)
         offset = self._store.get(offset_key)
@@ -188,8 +216,9 @@ class Partition:
         index_key = Partition.INDEX
         self._store.put(index_key, next_index, write_batch=write_batch)
 
-    def _increase_offset(self, receiver: str):
-        next_offset = self._get_offset(receiver) + 1
+    def _increase_offset(self, receiver: str, next_offset=None):
+        if next_offset is None:
+            next_offset = self._get_offset(receiver) + 1
         if next_offset > MAX_UINT:
             raise ValueError(next_offset)
         offset_key = self._get_offset_key(receiver)
@@ -197,7 +226,7 @@ class Partition:
 
     @staticmethod
     def _get_offset_key(receiver: str) -> bytes:
-        offset_key = Partition.OFFSET + bytes(receiver, 'utf-8')
+        offset_key = Partition.OFFSET + bytes(receiver, "utf-8")
         return offset_key
 
     @staticmethod
