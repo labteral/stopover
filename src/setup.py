@@ -33,13 +33,13 @@ setup(name='stopover-server',
       ],
       python_requires='>=3.10,<4',
       install_requires=[
-          'msgpack >= 1.2.1, < 2.0.0',
+          'msgpack >= 1.2.4, < 2.0.0',
           'python-snappy >= 0.7.3, < 1.0.0',
-          'cramjam >= 2.13.0, < 3.0.0',
+          'cramjam >= 2.14.0, < 3.0.0',
           'easyrocks >= 4.2610.0, < 5.0.0',
-          'pyyaml >= 6.0.0, < 7.0.0',
-          'falcon >= 4.3.1, < 5.0.0',
-          'waitress == 3.0.2',
+          'pyyaml >= 6.0.3, < 7.0.0',
+          'falcon >= 4.4.0, < 5.0.0',
+          'waitress >= 3.0.2, < 4.0.0',
       ],
       entry_points={
           'console_scripts': [

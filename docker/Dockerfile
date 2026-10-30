@@ -1,4 +1,4 @@
-FROM python:3.14.8-alpine3.24@sha256:8acac70227ce3b34da9453120c375cc5b66cd0b062d4dc6bc74286f81a3819e1
+FROM python:3.14.10-alpine3.24@sha256:eb2c62658b8d51bff0acc408504b76521d02030de56a8a3c1e830083e89b89d2
 ENV PYTHONDONTWRITEBYTECODE=1
 COPY src /src
 RUN apk add --no-cache crc32c 'zlib>=1.3.2-r1' \
