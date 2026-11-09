@@ -1,10 +1,11 @@
-FROM cgr.dev/chainguard/wolfi-base:latest AS base
-RUN apk upgrade --no-cache \
-    && apk add --no-cache 'python-3.14>=3.14.10' libstdc++ 'libexpat1>=2.10.0' 'sqlite-libs>=3.54.0'
+FROM cgr.dev/chainguard/wolfi-base@sha256:24f549a7fcace88e69b9557941168c74645688ecc4acf7fb6d734a6b74e9019d AS base
+COPY docker/apk-base.lock /tmp/apk-base.lock
+RUN apk add --no-cache $(cat /tmp/apk-base.lock)
 ENV PATH="/opt/venv/bin:${PATH}" PYTHONDONTWRITEBYTECODE=1 PIP_NO_CACHE_DIR=1
 
 FROM base AS pypkgs
-RUN apk add --no-cache py3.14-pip
+COPY docker/apk-pypkgs.lock /tmp/apk-pypkgs.lock
+RUN apk add --no-cache $(cat /tmp/apk-pypkgs.lock)
 RUN /usr/bin/python3.14 -m venv --without-pip /opt/venv
 COPY src /src
 RUN /usr/bin/python3.14 -m pip --python /opt/venv install --no-compile --only-binary=google-crc32c,pymongo,rocksdict /src \
