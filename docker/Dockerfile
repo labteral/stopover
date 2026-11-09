@@ -8,7 +8,7 @@ COPY docker/apk-pypkgs.lock /tmp/apk-pypkgs.lock
 RUN apk add --no-cache $(cat /tmp/apk-pypkgs.lock)
 RUN /usr/bin/python3.14 -m venv --without-pip /opt/venv
 COPY src /src
-RUN /usr/bin/python3.14 -m pip --python /opt/venv install --no-compile --only-binary=google-crc32c,pymongo,rocksdict /src \
+RUN /usr/bin/python3.14 -m pip --python /opt/venv install --no-compile --only-binary=google-crc32c,rocksdict /src \
     && /usr/bin/python3.14 -m pip --python /opt/venv check
 
 FROM base
