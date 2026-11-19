@@ -13,7 +13,12 @@ networks:
 services:
   stopover:
     container_name: stopover-server
-    image: labteral/stopover-server
+    # Always built from this repository; never pulled from a registry.
+    image: stopover-server:local
+    pull_policy: build
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
     volumes:
       - ./config.yaml:/opt/stopover/config.yaml:ro
       - ./data/:/opt/stopover/data/:rw
