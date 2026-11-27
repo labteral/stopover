@@ -23,6 +23,23 @@ class SetOffsetTest(unittest.TestCase):
         self.assertEqual(self.partition._get_offset('group'), 2)
         self.assertIsNone(self.partition.get('group'))
 
+    def test_end_of_stream_poll_reads_no_message(self):
+        self.partition.set_offset('group', 2)
+        reads = AssertionError('a message was read')
+        with patch.object(self.partition, '_get_by_index', side_effect=reads), \
+                patch.object(self.partition, '_first_available_index', side_effect=reads):
+            self.assertIsNone(self.partition.get('group'))
+            self.assertIsNone(self.partition.get('group', index=3))
+            self.assertIsNone(self.partition.get('group', index=3, skip_pruned=True))
+        # A pruned prefix is still skipped once there is something to read.
+        self.partition.prune(ttl=0)
+        self.assertIsNone(self.partition.get('group'))
+        self.partition.put(PartitionItem(b'y', timestamp=2 ** 62))
+        self.partition.set_offset('late', -1)
+        self.assertEqual(self.partition.get('late')['index'], 3)
+        self.assertEqual(self.partition._get_offset('late'), 2)
+        self.assertEqual(self.partition.get('group')['index'], 3)
+
     def test_offset_is_clamped_and_validated(self):
         self.partition.set_offset('group', 99)
         self.assertEqual(self.partition._get_offset('group'), 2)

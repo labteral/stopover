@@ -101,6 +101,10 @@ class Partition:
                 receiver_index = index
             else:
                 receiver_index = self._get_offset(receiver_group) + 1
+            # Nothing exists past the last index. Looking up a missing message
+            # or locating the first stored one can read a whole value.
+            if receiver_index > self._get_index():
+                return None
             partition_item = self._get_by_index(receiver_index)
 
             # Fast-forward the offset if messages were pruned
